@@ -1,0 +1,184 @@
+/* ---------------------------------------------------------------------------
+   .markdown — prose / long-form content styles
+   Apply to any element wrapping rendered markdown or rich text content.
+   Adapted from zero-core conventions (nuxt3-starter).
+--------------------------------------------------------------------------- */
+
+.markdown {
+
+  /* ---- Headings --------------------------------------------------------- */
+
+  h1, h2, h3, h4, h5, h6 {
+    margin-bottom: var(--space-5);
+  }
+
+  h1:not(:first-child),
+  h2:not(:first-child),
+  h3:not(:first-child),
+  h4:not(:first-child),
+  h5:not(:first-child),
+  h6:not(:first-child) {
+    margin-top: var(--space-12);
+  }
+
+  /* Heading immediately followed by a list needs a little more room */
+  h1 + ul, h1 + ol,
+  h2 + ul, h2 + ol,
+  h3 + ul, h3 + ol,
+  h4 + ul, h4 + ol {
+    margin-top: var(--space-6);
+  }
+
+  h1 { margin-bottom: var(--space-10); }
+
+  /* ---- Body text -------------------------------------------------------- */
+
+  p:not(:last-child) {
+    margin-bottom: var(--space-4);
+  }
+
+  a {
+    color: var(--color-primary);
+    text-underline-offset: 0.2em;
+  }
+
+  a:hover {
+    color: var(--color-primary-h);
+  }
+
+  /* ---- Divider ---------------------------------------------------------- */
+
+  hr {
+    border: none;
+    border-top: var(--border-width) solid var(--color-border);
+    margin-block: var(--space-8);
+  }
+
+  /* ---- Lists ------------------------------------------------------------ */
+
+  ul, ol {
+    padding-left: var(--space-6);
+  }
+
+  ul:not(:last-child),
+  ol:not(:last-child) {
+    margin-bottom: var(--space-4);
+  }
+
+  /* Custom bullet — small dot via pseudo-element, no native marker */
+  ul li {
+    list-style-type: none;
+    position: relative;
+    padding-left: 1.375rem;
+    margin: 0;
+  }
+
+  ul li::before {
+    content: '';
+    display: block;
+    position: absolute;
+    left: 0.5rem;
+    top: 0.75em;
+    width: 5px;
+    height: 5px;
+    transform: translateY(-50%);
+    border-radius: var(--radius-full);
+    background-color: var(--color-primary);
+  }
+
+  /* Second-level bullets — hollow ring */
+  ul li > ul > li::before {
+    background-color: transparent;
+    border: var(--border-width) solid var(--color-primary);
+  }
+
+  ol li {
+    list-style-type: decimal;
+  }
+
+  li > ul {
+    margin-top: 0;
+  }
+
+  /* ---- Blockquote ------------------------------------------------------- */
+
+  blockquote {
+    margin: 0;
+    padding-left: 2.25rem;
+    border-left: 4px solid var(--color-border-h);
+    color: var(--color-text-muted);
+  }
+
+  blockquote:not(:first-child) { margin-top: var(--space-8); }
+  blockquote:not(:last-child)  { margin-bottom: var(--space-8); }
+
+  /* ---- Tables ----------------------------------------------------------- */
+
+  table {
+    width: 100%;
+    border-top: 2px solid var(--color-border);
+    border-bottom: 2px solid var(--color-border);
+    margin-bottom: var(--space-5);
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  th {
+    font-weight: var(--font-semibold);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-wide);
+    padding-top: var(--space-3);
+    color: var(--color-text-muted);
+  }
+
+  td {
+    font-size: var(--text-sm);
+  }
+
+  thead tr {
+    background-color: var(--color-bg);
+  }
+
+  tbody tr:nth-child(odd)  { background-color: var(--color-surface); }
+  tbody tr:nth-child(even) { background-color: var(--color-bg); }
+  tbody tr:last-child td   { padding-bottom: var(--space-3); }
+
+  /* ---- Code ------------------------------------------------------------- */
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    color: var(--color-primary);
+    background-color: var(--color-surface-2);
+    padding: 0.15em 0.4em;
+    border-radius: var(--radius-sm);
+    white-space: break-spaces;
+  }
+
+  pre {
+    background-color: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    padding: var(--space-5) var(--space-6);
+    margin-bottom: var(--space-5);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    font-family: var(--font-mono);
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  pre code {
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+    color: var(--color-text);
+    font-size: inherit;
+    border-radius: 0;
+  }
+}

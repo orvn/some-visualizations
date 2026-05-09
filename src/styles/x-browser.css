@@ -1,0 +1,89 @@
+/*
+ * Cross-browser compatibility patches
+ * Targets specific browsers where the default behaviour diverges.
+ * Ported from zero-core/assets/scss — vendor-prefix blocks only;
+ * animation/transform prefixes (pre-2015) are intentionally omitted.
+ */
+
+/* ---------------------------------------------------------------------------
+   Firefox — remove inner focus ring on buttons
+--------------------------------------------------------------------------- */
+
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Firefox — fix select focus ring rendering (shows dotted border by default)
+--------------------------------------------------------------------------- */
+
+select:-moz-focusring {
+  color: transparent;
+  text-shadow: 0 0 0 var(--color-text);
+}
+
+/* ---------------------------------------------------------------------------
+   WebKit / Blink — style the file upload button so it inherits site fonts
+--------------------------------------------------------------------------- */
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  font: inherit;
+}
+
+/* ---------------------------------------------------------------------------
+   WebKit / Blink — suppress native number-input spinners
+   (spinners clash with custom increment/decrement UI patterns)
+--------------------------------------------------------------------------- */
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* ---------------------------------------------------------------------------
+   WebKit — suppress native search-field decorations
+--------------------------------------------------------------------------- */
+
+input[type='search']::-webkit-search-decoration,
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-results-button,
+input[type='search']::-webkit-search-results-decoration {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   All browsers — cross-browser placeholder colour
+   Each selector must be its own rule; grouping breaks the block entirely.
+--------------------------------------------------------------------------- */
+
+::-webkit-input-placeholder { color: var(--color-text-muted); opacity: 1; }
+::-moz-placeholder           { color: var(--color-text-muted); opacity: 1; }
+:-ms-input-placeholder       { color: var(--color-text-muted); opacity: 1; }
+::placeholder                { color: var(--color-text-muted); opacity: 1; }
+
+/* ---------------------------------------------------------------------------
+   Safari — prevent tap highlight flash on interactive elements
+--------------------------------------------------------------------------- */
+
+a,
+button,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   iOS Safari — prevent font size inflation after orientation change
+--------------------------------------------------------------------------- */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}

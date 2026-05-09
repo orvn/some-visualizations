@@ -1,0 +1,116 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config/site';
+
+// Schema appears on every home page
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  description: SITE.description,
+  url: SITE.url,
+};
+---
+
+<!--
+  Home page: title is intentionally omitted so the <title> renders as just
+  the site name ("Site Name") rather than "Home - Site Name".
+-->
+<BaseLayout
+  description={SITE.description}
+  jsonLD={jsonLD}
+>
+
+  <section class="hero">
+    <div class="container">
+      <h1>{SITE.name}</h1>
+      <p class="hero-tagline">{SITE.tagline}</p>
+      <div class="hero-actions">
+        <a href="#" class="btn btn-primary magnify-onhover">Get started</a>
+        <a href="#" class="btn btn-outline magnify-onhover">Learn more</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Example of Alpine.js interactivity with minimal footprint -->
+  <section class="demo-section">
+    <div class="container">
+      <div class="demo-card" x-data="{ count: 0 }">
+        <p>Alpine demo</p>
+        <div class="counter">
+          <button
+            class="btn btn-outline"
+            @click="count--"
+            :disabled="count <= 0"
+            aria-label="Decrement"
+            data-tooltip="Decrement"
+          >−</button>
+          <output x-text="count" aria-live="polite" aria-atomic="true">0</output>
+          <button
+            class="btn btn-outline"
+            @click="count++"
+            aria-label="Increment"
+            data-tooltip="Increment"
+          >+</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .hero {
+    padding-block: var(--space-24);
+    text-align: center;
+  }
+
+  .hero h1 {
+    margin-bottom: var(--space-4);
+  }
+
+  .hero-tagline {
+    font-size: var(--text-xl);
+    color: var(--color-text-muted);
+    max-width: 40ch;
+    margin-inline: auto;
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+  }
+
+  .demo-section {
+    padding-block: var(--space-16);
+    border-top: var(--border-width) solid var(--color-border);
+  }
+
+  .demo-card {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: center;
+    padding: var(--space-8);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface);
+  }
+
+  .counter {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .counter output {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    min-width: 3ch;
+    text-align: center;
+  }
+</style>
