@@ -1,8 +1,8 @@
 ![Alpine.js](https://img.shields.io/badge/Alpine.js-8BC0D0?style=flat&logo=alpinedotjs&logoColor=black) ![Astro](https://img.shields.io/badge/Astro-FF5D01?style=flat&logo=astro&logoColor=white) ![Bun](https://img.shields.io/badge/Bun-000000?style=flat&logo=bun&logoColor=white)
 
-# Astro Starter
+# Some Visualizations
 
-A static site template repo built with [Astro](https://astro.build) and [Alpine.js](https://alpinejs.dev). Optimised for minimal Javascript footprint, performance, a11y, and SEO.
+A collection of frontend interactive data. Built with [Astro](https://astro.build) and [Alpine.js](https://alpinejs.dev).
 
 ## Stack
 
@@ -95,11 +95,11 @@ content:
 `src/content/global.toon` holds site-wide values used across all pages — site name, default description, default OG image, and the title postfix appended to every page title:
 
 ```
-name: Site Name
+name: Some Visualizations
 tagline: Short site tagline.
-description: Default meta description.
+description: A collection of frontend interactive data.
 url: https://example.com
-title_postfix: " — Site Name"
+title_postfix: " — Some Visualizations"
 og_image: /og-default.png
 ```
 
@@ -153,7 +153,7 @@ Configured in `astro.config.mjs`:
 
 ```js
 server: {
-  port: 14220,
+  port: 14300,
 },
 ```
 
@@ -175,7 +175,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </BaseLayout>
 ```
 
-The `title` prop renders as `Page Title - Site Name` in `<title>`. Omit it on the home page to render just the site name.
+The `title` prop renders as `Page Title - Some Visualizations` in `<title>`. Omit it on the home page to render just the site name.
 
 ### Nav links
 
