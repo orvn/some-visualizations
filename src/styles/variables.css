@@ -20,9 +20,9 @@
      Typography
   -------------------------------------------------------------------------- */
 
-   /* Sample fonts */
-   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-      Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+   --font-display: 'Bota', Georgia, 'Times New Roman', Times, serif;
+   --font-sans: 'Familjen Grotesk', system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
    --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo,
       Consolas, 'DejaVu Sans Mono', monospace;
 
