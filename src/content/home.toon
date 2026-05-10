@@ -6,9 +6,6 @@ meta:
 options: null
 
 content:
-  heading: Some Visualizations
-  tagline: A minimal, opinionated starting point.
-  cta_primary: Get started
-  cta_primary_href: "#"
-  cta_secondary: Learn more
-  cta_secondary_href: "#"
+  heading: "Normal Distribution & Variance"
+  eyebrow: Statistics / Probability
+  subtitle: "Variance (σ²) controls how spread out values fall around the mean (μ = 0)"
