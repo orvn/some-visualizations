@@ -281,9 +281,17 @@ const jsonLD = {
       });
     }
 
-    // Register on alpine:init (initial load) and immediately (client-side nav)
+    // Initial page load: register before Alpine starts
     document.addEventListener('alpine:init', registerComponent);
-    if (typeof Alpine !== 'undefined') registerComponent();
+
+    // Client-side navigation: Alpine already started, register and re-init
+    if (typeof Alpine !== 'undefined') {
+      registerComponent();
+      var el = document.querySelector('[x-data="normalVariance"]');
+      if (el && !el._x_dataStack) {
+        Alpine.initTree(el);
+      }
+    }
   })();
   </script>
 
