@@ -166,7 +166,8 @@ const jsonLD = {
       { v: 4,    label: 'σ²=4  wide',        color: '#90b878' },
     ];
 
-    document.addEventListener('alpine:init', function() {
+    function registerComponent() {
+      if (typeof Alpine === 'undefined') return;
       Alpine.data('normalVariance', function() {
         var chart = null;
         var animFrame = null;
@@ -278,7 +279,11 @@ const jsonLD = {
           },
         };
       });
-    });
+    }
+
+    // Register on alpine:init (initial load) and immediately (client-side nav)
+    document.addEventListener('alpine:init', registerComponent);
+    if (typeof Alpine !== 'undefined') registerComponent();
   })();
   </script>
 
