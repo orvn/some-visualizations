@@ -6,51 +6,192 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="site-footer" role="contentinfo">
-  <div class="container footer-inner">
-    <p class="footer-copy">
-      &copy; {year} {name}. All rights reserved.
-    </p>
-    <nav class="footer-nav" aria-label="Footer navigation">
-      <ul role="list">
-        <li><a href="/privacy">Privacy</a></li>
-      </ul>
-    </nav>
+  <svg class="stepped-divider" xmlns="http://www.w3.org/2000/svg" viewBox="-530 0 1600 150" preserveAspectRatio="none" aria-hidden="true">
+    <rect x="-530" y="0" width="3200" height="150" fill="var(--parchment)" />
+    <rect x="-530" y="0" width="2130" height="150" fill="var(--graphite)" class="hist-sky" />
+    <g class="hist-bars">
+      <rect x="0"    width="40" y="150" height="0" data-h="0.69"   fill="var(--parchment)" />
+      <rect x="40"   width="40" y="150" height="0" data-h="1.35"   fill="var(--parchment)" />
+      <rect x="80"   width="40" y="150" height="0" data-h="1.97"   fill="var(--parchment)" />
+      <rect x="120"  width="40" y="150" height="0" data-h="3.92"   fill="var(--parchment)" />
+      <rect x="160"  width="40" y="150" height="0" data-h="5.63"   fill="var(--parchment)" />
+      <rect x="200"  width="40" y="150" height="0" data-h="8.53"   fill="var(--parchment)" />
+      <rect x="240"  width="40" y="150" height="0" data-h="11.31"  fill="var(--parchment)" />
+      <rect x="280"  width="40" y="150" height="0" data-h="16.67"  fill="var(--parchment)" />
+      <rect x="320"  width="40" y="150" height="0" data-h="25.24"  fill="var(--parchment)" />
+      <rect x="360"  width="40" y="150" height="0" data-h="30.35"  fill="var(--parchment)" />
+      <rect x="400"  width="40" y="150" height="0" data-h="38.15"  fill="var(--parchment)" />
+      <rect x="440"  width="40" y="150" height="0" data-h="58.78"  fill="var(--parchment)" />
+      <rect x="480"  width="40" y="150" height="0" data-h="67.47"  fill="var(--parchment)" />
+      <rect x="520"  width="40" y="150" height="0" data-h="88.29"  fill="var(--parchment)" />
+      <rect x="560"  width="40" y="150" height="0" data-h="104.80" fill="var(--parchment)" />
+      <rect x="600"  width="40" y="150" height="0" data-h="100.29" fill="var(--parchment)" />
+      <rect x="640"  width="40" y="150" height="0" data-h="122.34" fill="var(--parchment)" />
+      <rect x="680"  width="40" y="150" height="0" data-h="114.93" fill="var(--parchment)" />
+      <rect x="720"  width="40" y="150" height="0" data-h="133.00" fill="var(--parchment)" />
+      <rect x="760"  width="40" y="150" height="0" data-h="127.47" fill="var(--parchment)" />
+      <rect x="800"  width="40" y="150" height="0" data-h="135.00" fill="var(--parchment)" />
+      <rect x="840"  width="40" y="150" height="0" data-h="117.11" fill="var(--parchment)" />
+      <rect x="880"  width="40" y="150" height="0" data-h="90.38"  fill="var(--parchment)" />
+      <rect x="920"  width="40" y="150" height="0" data-h="104.73" fill="var(--parchment)" />
+      <rect x="960"  width="40" y="150" height="0" data-h="76.53"  fill="var(--parchment)" />
+      <rect x="1000" width="40" y="150" height="0" data-h="76.85"  fill="var(--parchment)" />
+      <rect x="1040" width="40" y="150" height="0" data-h="59.70"  fill="var(--parchment)" />
+      <rect x="1080" width="40" y="150" height="0" data-h="42.55"  fill="var(--parchment)" />
+      <rect x="1120" width="40" y="150" height="0" data-h="35.55"  fill="var(--parchment)" />
+      <rect x="1160" width="40" y="150" height="0" data-h="22.27"  fill="var(--parchment)" />
+      <rect x="1200" width="40" y="150" height="0" data-h="17.23"  fill="var(--parchment)" />
+      <rect x="1240" width="40" y="150" height="0" data-h="13.42"  fill="var(--parchment)" />
+      <rect x="1280" width="40" y="150" height="0" data-h="7.28"   fill="var(--parchment)" />
+      <rect x="1320" width="40" y="150" height="0" data-h="4.83"   fill="var(--parchment)" />
+      <rect x="1360" width="40" y="150" height="0" data-h="3.61"   fill="var(--parchment)" />
+      <rect x="1400" width="40" y="150" height="0" data-h="2.51"   fill="var(--parchment)" />
+      <rect x="1440" width="40" y="150" height="0" data-h="1.41"   fill="var(--parchment)" />
+      <rect x="1480" width="40" y="150" height="0" data-h="0.85"   fill="var(--parchment)" />
+      <rect x="1520" width="40" y="150" height="0" data-h="0.50"   fill="var(--parchment)" />
+    </g>
+  </svg>
+
+  <div class="footer-body">
+    <div class="container">
+      <div class="footer-main">
+        <p class="footer-bins">&nbsp;</p>
+        <p class="footer-title">{name}</p>
+        <p class="footer-tagline">&nbsp;</p>
+      </div>
+
+      <div class="footer-bar">
+        <p class="footer-copy">&copy; {year}</p>
+        <nav class="footer-nav" aria-label="Footer navigation">
+        </nav>
+      </div>
+    </div>
   </div>
 </footer>
 
 <style>
   .site-footer {
-    border-top: 1px solid var(--bronze);
-    background-color: var(--graphite);
-    padding-block: 1.5rem;
+    margin-top: auto;
+    background-color: var(--parchment);
   }
 
-  .footer-inner {
+  .stepped-divider {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-bottom: -0.0625rem;
+  }
+
+  .footer-body {
+    background-color: var(--parchment);
+    padding-block: 2rem 1.5rem;
+  }
+
+  .footer-bins {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--sienna);
+    margin-bottom: 0.5rem;
+    min-height: 1em;
+  }
+
+  .footer-title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(3.5rem, 10vw, 6rem);
+    max-width: 12ch;
+    line-height: 1.05;
+    color: var(--graphite);
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-tagline {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 300;
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    color: var(--graphite);
+    opacity: 0.7;
+    min-height: 1em;
+  }
+
+  .footer-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 0.0625rem solid var(--teak);
   }
 
   .footer-copy {
+    font-family: var(--font-sans);
     font-size: var(--text-sm);
     color: var(--potters-clay);
   }
 
-  .footer-nav ul {
+  .footer-nav {
     display: flex;
-    gap: 1.25rem;
+    gap: 1.5rem;
   }
 
   .footer-nav a {
+    font-family: var(--font-sans);
     font-size: var(--text-sm);
-    color: var(--potters-clay);
-    text-decoration: none;
+    color: var(--graphite);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
     transition: color var(--transition-fast);
   }
 
   .footer-nav a:hover {
-    color: var(--colonial);
+    color: var(--potters-clay);
   }
 </style>
+
+<script is:inline>
+(function() {
+  function initHistogram() {
+    var svg = document.querySelector('.stepped-divider');
+    if (!svg) return;
+    var bars = svg.querySelectorAll('.hist-bars rect');
+    if (!bars.length) return;
+
+    var targets = [];
+    bars.forEach(function(bar) {
+      targets.push(parseFloat(bar.dataset.h));
+    });
+
+    function onScroll() {
+      var rect = svg.getBoundingClientRect();
+      var vh = window.innerHeight;
+
+      // Progress: 0 when SVG top hits viewport bottom, 1 when SVG top reaches ~40% up the viewport
+      var progress = (vh - rect.top) / (vh * 0.8);
+      progress = Math.max(0, Math.min(1, progress));
+
+      bars.forEach(function(bar, i) {
+        var h = targets[i] * progress;
+        bar.setAttribute('height', String(h));
+        bar.setAttribute('y', String(150 - h));
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHistogram);
+  } else {
+    initHistogram();
+  }
+  document.addEventListener('astro:page-load', initHistogram);
+})();
+</script>
