@@ -19,7 +19,7 @@ const { name } = loadGlobal();
     position: relative;
     height: var(--header-height);
     background-color: var(--graphite);
-    border-bottom: 0.0625rem solid var(--bronze);
+    border-bottom: none;
     z-index: var(--z-header);
   }
 
@@ -32,12 +32,40 @@ const { name } = loadGlobal();
 
   .site-logo {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: var(--text-lg);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.75rem;
+    line-height: 1;
     color: var(--parchment);
     text-decoration: none;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.002em;
+    position: relative;
+    display: inline-block;
+    padding: 0.5rem 0.5rem 0.625rem 1rem;
+    white-space: nowrap;
     transition: color var(--transition-fast);
+  }
+
+  .site-logo::before,
+  .site-logo::after {
+    content: "";
+    position: absolute;
+    background: var(--potters-clay);
+    opacity: 0.6;
+  }
+
+  .site-logo::before {
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 0.0625rem;
+  }
+
+  .site-logo::after {
+    left: 0;
+    right: -100vw;
+    bottom: 0.5rem;
+    height: 0.0625rem;
   }
 
   .site-logo:hover {
