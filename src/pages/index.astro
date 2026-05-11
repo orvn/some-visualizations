@@ -1,14 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Toggle from '../components/Toggle.astro';
 import { loadGlobal, loadPage } from '../lib/content';
 
 const global = loadGlobal();
 const { meta, content } = loadPage('home');
 const c = content as {
   heading: string;
-  eyebrow: string;
-  subtitle: string;
+  tagline: string;
 };
 
 const jsonLD = {
@@ -18,6 +16,15 @@ const jsonLD = {
   description: global.description,
   url: global.url,
 };
+
+const visualizations = [
+  {
+    title: 'Normal Distribution & Variance',
+    description: 'Interactive visualization of normal distribution curves and how variance controls spread.',
+    category: 'Statistics / Probability',
+    href: '/normals',
+  },
+];
 ---
 
 <BaseLayout
@@ -27,320 +34,73 @@ const jsonLD = {
   jsonLD={jsonLD}
 >
 
-  <section class="viz-wrap">
-    <div class="viz-container" x-data="normalVariance">
-
-      <p class="eyebrow">{c.eyebrow}</p>
+  <section class="listing-wrap">
+    <div class="container">
       <h1>{c.heading}</h1>
-      <p class="subtitle">{c.subtitle}</p>
+      <p class="tagline">{c.tagline}</p>
 
-      <div class="card">
-        <div class="card-header">
-          <p class="card-label" x-text="mode === 'a' ? 'Interactive' : 'Reference curves at fixed variances'"></p>
-          <Toggle options={['Interactive', 'Reference']} modelField="mode" />
-        </div>
-
-        <canvas id="mainChart"></canvas>
-
-        <div class="controls-wrap" x-bind:class="{ 'is-open': mode === 'a' }">
-          <div class="controls-inner">
-            <div class="slider-row">
-              <span class="slider-val">σ² = <span x-text="targetVariance.toFixed(2)"></span></span>
-              <input type="range" min="0.1" max="6" step="0.05"
-                     x-bind:value="targetVariance"
-                     x-on:input="setTarget($event.target.value)" />
-              <span class="slider-sigma">σ = <span x-text="Math.sqrt(targetVariance).toFixed(3)"></span></span>
-            </div>
-
-            <p class="stat-line">
-              Peak height = <span x-text="peak()"></span>
-              &nbsp;·&nbsp;
-              ≈68% of values fall within ±σ = <em x-text="'±' + Math.sqrt(displayedVariance).toFixed(3)"></em>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Key intuition -->
-      <div class="insight">
-        <p class="card-label">Key intuition</p>
-        <ul>
-          <li><strong>Variance σ² &gt; 0 always.</strong> It's the average <em>squared</em> distance from the mean. Squaring eliminates negatives.</li>
-          <li><strong>Larger σ²</strong> → flatter, wider bell → values more spread out, more uncertainty.</li>
-          <li><strong>Smaller σ²</strong> → taller, narrower bell → values cluster tightly around the mean.</li>
-          <li><strong>σ² = 0</strong> only if the variable is a constant. <strong>σ² &lt; 0</strong> is mathematically impossible.</li>
-          <li>The area under every curve = 1. Total probability is always 100%, just differently shaped.</li>
-        </ul>
-      </div>
-
+      <ul class="viz-grid" role="list">
+        {visualizations.map((viz) => (
+          <li>
+            <a href={viz.href} class="viz-card">
+              <span class="viz-category">{viz.category}</span>
+              <span class="viz-title">{viz.title}</span>
+              <span class="viz-desc">{viz.description}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   </section>
-
-  <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
-  <script is:inline>
-  (function() {
-    var MEAN = 0;
-    var X_VALS = [];
-    for (var x = -6; x <= 6; x += 0.12) X_VALS.push(parseFloat(x.toFixed(2)));
-
-    function pdf(x, variance) {
-      var s = Math.sqrt(variance);
-      return (1 / (s * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - MEAN) / s, 2));
-    }
-
-    function makeScriptableGrad(hex, a0, a1) {
-      a0 = a0 || 0.5;
-      a1 = a1 || 0.01;
-      var r = parseInt(hex.slice(1,3),16);
-      var g = parseInt(hex.slice(3,5),16);
-      var b = parseInt(hex.slice(5,7),16);
-      var cached = null;
-      return function(context) {
-        var chart = context.chart;
-        var ctx = chart.ctx;
-        var chartArea = chart.chartArea;
-        if (!chartArea) return 'rgba(' + r + ',' + g + ',' + b + ',0)';
-        var top = chartArea.top;
-        var bottom = chartArea.bottom;
-        if (!cached || cached.top !== top || cached.bottom !== bottom) {
-          var gr = ctx.createLinearGradient(0, top, 0, bottom);
-          gr.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + a0 + ')');
-          gr.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',' + a1 + ')');
-          cached = { top: top, bottom: bottom, gr: gr };
-        }
-        return cached.gr;
-      };
-    }
-
-    var BASE_OPTIONS = {
-      animation: { duration: 500, easing: 'easeInOutCubic' },
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 2.4,
-      plugins: {
-        legend: {
-          display: true,
-          labels: {
-            color: '#b89470', font: { size: 12 }, boxWidth: 12,
-            filter: function(item, chartData) {
-              var ds = chartData.datasets[item.datasetIndex];
-              return ds.data.some(function(v) { return v > 0; });
-            },
-          },
-        },
-        tooltip: {
-          backgroundColor: '#2e1508',
-          borderColor: '#3a1a0a',
-          borderWidth: 1,
-          titleColor: '#7a5a3a',
-          bodyColor: '#f0d8a8',
-        }
-      },
-      scales: {
-        x: {
-          type: 'linear', min: -6, max: 6,
-          ticks: { color: '#7a5a3a', maxTicksLimit: 13 },
-          grid: { color: '#2e1508' },
-          border: { color: '#3a1a0a' },
-          title: { display: true, text: 'x', color: '#7a5a3a' }
-        },
-        y: {
-          min: 0, max: 0.85,
-          ticks: { color: '#7a5a3a' },
-          grid: { color: '#2e1508' },
-          border: { color: '#3a1a0a' },
-          title: { display: true, text: 'P(x)', color: '#7a5a3a' }
-        }
-      }
-    };
-
-    // Dataset indices: 0 = interactive, 1-3 = reference curves
-    var LIVE_IDX = 0;
-    var REF_START = 1;
-    var REF_END = 3;
-
-    var REFS = [
-      { v: 0.25, label: 'σ²=0.25  tight',   color: '#f07858' },
-      { v: 1,    label: 'σ²=1  standard',    color: '#e8a050' },
-      { v: 4,    label: 'σ²=4  wide',        color: '#90b878' },
-    ];
-
-    document.addEventListener('alpine:init', function() {
-      Alpine.data('normalVariance', function() {
-        var chart = null;
-        var animFrame = null;
-        var currentVal = 1;
-
-        function buildChart(initVariance) {
-          var existing = Chart.getChart('mainChart');
-          if (existing) existing.destroy();
-          var ctx = document.getElementById('mainChart').getContext('2d');
-
-          var datasets = [
-            {
-              label: 'distribution',
-              data: X_VALS.map(function(x) { return pdf(x, initVariance); }),
-              borderColor: '#f0d8a8', borderWidth: 3,
-              backgroundColor: makeScriptableGrad('#f0d8a8', 0.55, 0.01),
-              fill: true, pointRadius: 0, tension: 0.4,
-            }
-          ];
-
-          REFS.forEach(function(r) {
-            datasets.push({
-              label: r.label,
-              data: ZEROS,
-              borderColor: r.color,
-              borderWidth: 2,
-              backgroundColor: makeScriptableGrad(r.color, 0.35, 0.01),
-              fill: true, pointRadius: 0, tension: 0.4,
-            });
-          });
-
-          chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: X_VALS, datasets: datasets },
-            options: BASE_OPTIONS,
-          });
-        }
-
-        var ZEROS = X_VALS.map(function() { return 0; });
-        var refData = REFS.map(function(r) {
-          return X_VALS.map(function(x) { return pdf(x, r.v); });
-        });
-
-        function setMode(mode) {
-          if (!chart) return;
-          var showLive = mode === 'a';
-
-          // Collapse outgoing curves to zero, grow incoming curves from zero
-          if (showLive) {
-            // Show live: restore its data, zero out refs
-            chart.data.datasets[LIVE_IDX].data = X_VALS.map(function(x) {
-              return pdf(x, currentVal);
-            });
-            for (var i = REF_START; i <= REF_END; i++) {
-              chart.data.datasets[i].data = ZEROS;
-            }
-          } else {
-            // Show refs: restore their data, zero out live
-            chart.data.datasets[LIVE_IDX].data = ZEROS;
-            for (var i = REF_START; i <= REF_END; i++) {
-              chart.data.datasets[i].data = refData[i - REF_START];
-            }
-          }
-          chart.update();
-        }
-
-        function updateLiveData(variance) {
-          if (!chart) return;
-          chart.data.datasets[LIVE_IDX].data = X_VALS.map(function(x) { return pdf(x, variance); });
-          chart.update('none');
-        }
-
-        return {
-          mode: 'a',
-          targetVariance: 1,
-          displayedVariance: 1,
-
-          init: function() {
-            currentVal = this.targetVariance;
-            buildChart(this.displayedVariance);
-            var self = this;
-            this.$watch('mode', function(val) { setMode(val); });
-          },
-
-          setTarget: function(val) {
-            this.targetVariance = parseFloat(val);
-            if (animFrame) cancelAnimationFrame(animFrame);
-            var self = this;
-            var SPEED = 0.10;
-            var step = function() {
-              var diff = self.targetVariance - currentVal;
-              if (Math.abs(diff) < 0.0005) {
-                currentVal = self.targetVariance;
-                self.displayedVariance = self.targetVariance;
-                updateLiveData(self.displayedVariance);
-                animFrame = null;
-                return;
-              }
-              currentVal += diff * SPEED;
-              self.displayedVariance = currentVal;
-              updateLiveData(self.displayedVariance);
-              animFrame = requestAnimationFrame(step);
-            };
-            animFrame = requestAnimationFrame(step);
-          },
-
-          peak: function() {
-            return pdf(MEAN, this.displayedVariance).toFixed(4);
-          },
-        };
-      });
-    });
-  })();
-  </script>
 
 </BaseLayout>
 
 <style>
-  .viz-wrap {
-    padding-block: 2rem 4rem;
-  }
-
-  .viz-container {
-    max-width: 54rem;
-    margin-inline: auto;
-    padding-inline: var(--container-padding);
-  }
-
-  .eyebrow {
-    text-align: center;
-    font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-widest);
-    text-transform: uppercase;
-    color: var(--potters-clay);
-    margin-bottom: 0.5rem;
+  .listing-wrap {
+    padding-block: 3rem 4rem;
   }
 
   h1 {
-    text-align: center;
     font-size: var(--text-3xl);
     font-weight: normal;
-    letter-spacing: var(--tracking-tight);
-    margin-bottom: 0.5rem;
     color: var(--parchment);
+    margin-bottom: 0.5rem;
   }
 
-  .subtitle {
-    text-align: center;
+  .tagline {
     color: var(--teak);
-    font-size: var(--text-sm);
-    margin-bottom: 1.75rem;
+    font-size: var(--text-base);
+    margin-bottom: 3rem;
   }
 
-  .subtitle em {
-    font-style: italic;
+  .viz-grid :global(li) {
+    list-style: none;
   }
 
-  .card {
+  .viz-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 1.25rem;
+  }
+
+  .viz-grid :global(.viz-card) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.5rem;
     background: var(--crow);
     border: 0.0625rem solid var(--bronze);
     border-radius: 0.75rem;
-    padding: 1.25rem 1.25rem 0.875rem;
-    margin-bottom: 1.25rem;
+    text-decoration: none;
+    transition: border-color var(--transition-fast), background-color var(--transition-fast);
   }
 
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.875rem;
+  .viz-grid :global(.viz-card:hover) {
+    border-color: var(--potters-clay);
+    background: var(--clinker);
   }
 
-  .card-label {
+  .viz-grid :global(.viz-category) {
     font-family: var(--font-sans);
     font-size: var(--text-xs);
     letter-spacing: 0.15em;
@@ -348,125 +108,15 @@ const jsonLD = {
     color: var(--potters-clay);
   }
 
-  canvas {
-    display: block;
-    width: 100% !important;
-  }
-
-  .controls-wrap {
-    display: grid;
-    grid-template-rows: 0fr;
-    opacity: 0;
-    transition: grid-template-rows var(--transition-base), opacity var(--transition-base);
-    overflow: hidden;
-  }
-
-  .controls-wrap.is-open {
-    grid-template-rows: 1fr;
-    opacity: 1;
-  }
-
-  .controls-inner {
-    overflow: hidden;
-  }
-
-  .slider-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 0.875rem;
-  }
-
-  .slider-val {
-    font-family: var(--font-mono);
-    font-size: var(--text-base);
-    font-weight: bold;
-    color: var(--colonial);
-    min-width: 6.25rem;
-  }
-
-  input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    flex: 1;
-    cursor: pointer;
-    height: 0.5rem;
-    background: transparent;
-    padding: 0.75rem 0;
-    margin: 0;
-  }
-
-  input[type=range]::-webkit-slider-runnable-track {
-    height: 0.5rem;
-    background: var(--bronze);
-    border-radius: 0.25rem;
-  }
-
-  input[type=range]::-moz-range-track {
-    height: 0.5rem;
-    background: var(--bronze);
-    border-radius: 0.25rem;
-    border: none;
-  }
-
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 1.5rem;
-    height: 1.5rem;
-    background: var(--colonial);
-    border-radius: 50%;
-    border: none;
-    margin-top: -0.5rem;
-    cursor: pointer;
-  }
-
-  input[type=range]::-moz-range-thumb {
-    width: 1.5rem;
-    height: 1.5rem;
-    background: var(--colonial);
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-  }
-
-  .slider-sigma {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    color: var(--teak);
-    min-width: 5rem;
-    text-align: right;
-  }
-
-  .stat-line {
-    font-family: var(--font-sans);
-    font-size: var(--text-sm);
-    color: var(--potters-clay);
-    margin-top: 0.5rem;
-  }
-
-  .stat-line span {
-    color: var(--teak);
-  }
-
-  .stat-line em {
-    color: var(--colonial);
-    font-style: normal;
-  }
-
-  .insight {
-    border-top: 0.0625rem solid var(--bronze);
-    padding-top: 1.25rem;
-  }
-
-  .insight ul {
-    color: var(--teak);
-    font-size: var(--text-sm);
-    line-height: 1.9;
-    padding-left: 1.125rem;
-  }
-
-  .insight li strong {
+  .viz-grid :global(.viz-title) {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
     color: var(--parchment);
-    font-weight: normal;
+  }
+
+  .viz-grid :global(.viz-desc) {
+    font-size: var(--text-sm);
+    color: var(--teak);
+    line-height: var(--leading-relaxed);
   }
 </style>

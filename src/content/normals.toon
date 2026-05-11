@@ -1,0 +1,11 @@
+meta:
+  title: "Normal Distribution & Variance"
+  description: Interactive visualization of normal distribution curves and how variance controls spread.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Normal Distribution & Variance"
+  eyebrow: Statistics / Probability
+  subtitle: "Variance (σ²) controls how spread out values fall around the mean (μ = 0)"

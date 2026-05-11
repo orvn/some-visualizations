@@ -6,6 +6,5 @@ meta:
 options: null
 
 content:
-  heading: "Normal Distribution & Variance"
-  eyebrow: Statistics / Probability
-  subtitle: "Variance (σ²) controls how spread out values fall around the mean (μ = 0)"
+  heading: Some Visualizations
+  tagline: A collection of frontend interactive data.
