@@ -7,5 +7,5 @@ options: null
 
 content:
   heading: "Normal Distribution & Variance"
-  eyebrow: Statistics / Probability
+  eyebrow: Probability
   subtitle: "Variance (σ²) controls how spread out values fall around the mean (μ = 0)"

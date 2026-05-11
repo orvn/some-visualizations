@@ -1,0 +1,290 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('beta-posterior');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/beta-posterior',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="bayesBeta">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header">
+          <p class="card-label">Posterior distribution</p>
+          <div class="bias-controls">
+            <div class="slider-row">
+              <span class="slider-val" x-text="'bias: ' + parseFloat(bias).toFixed(2)"></span>
+              <input
+                type="range"
+                min="0.01" max="0.99" step="0.01"
+                x-model="bias"
+                x-bind:disabled="running"
+              />
+            </div>
+            <button
+              class="btn-start"
+              x-on:click="start()"
+              x-bind:disabled="running"
+              x-text="running ? 'Running...' : 'Start'"
+            ></button>
+          </div>
+        </div>
+
+        <div id="bayesChart" class="bayes-chart"></div>
+        <p class="stat-line" x-text="info || 'set a bias and press start'">&nbsp;</p>
+      </div>
+
+      <div class="card toss-card" x-show="tosses.length > 0">
+        <p class="card-label">Coin flips</p>
+        <div id="bayesTosses" class="bayes-tosses"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <script is:inline src="/js/d3.v3.min.js"></script>
+
+</BaseLayout>
+
+<style>
+  .viz-wrap {
+    padding-block: 2rem 4rem;
+  }
+
+  .viz-container {
+    max-width: 54rem;
+    margin-inline: auto;
+    padding-inline: var(--container-padding);
+  }
+
+  .eyebrow {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: var(--text-3xl);
+    font-weight: normal;
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: 0.5rem;
+    color: var(--parchment);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--teak);
+    font-size: var(--text-sm);
+    margin-bottom: 1.75rem;
+  }
+
+  .card {
+    background: var(--crow);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.25rem 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.875rem;
+  }
+
+  .card-label {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--potters-clay);
+  }
+
+  .bias-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  .slider-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: bold;
+    color: var(--colonial);
+    min-width: 5rem;
+    white-space: nowrap;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    cursor: pointer;
+    height: 0.5rem;
+    background: transparent;
+    padding: 0.75rem 0;
+    margin: 0;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+  }
+
+  input[type=range]::-moz-range-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+    border: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    margin-top: -0.5rem;
+    cursor: pointer;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-start {
+    padding: 0.375rem 1rem;
+    background: var(--bronze);
+    border: 0.0625rem solid var(--potters-clay);
+    border-radius: 0.375rem;
+    color: var(--parchment);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+  }
+
+  .btn-start:hover:not(:disabled) {
+    background: var(--potters-clay);
+  }
+
+  .btn-start:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .bayes-chart :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .bayes-chart :global(.axis path),
+  .bayes-chart :global(.axis line) {
+    fill: none;
+    stroke: var(--potters-clay);
+    stroke-width: 0.0625rem;
+    shape-rendering: crispEdges;
+  }
+
+  .bayes-chart :global(.axis text) {
+    fill: var(--potters-clay);
+    font-size: 0.6875rem;
+  }
+
+  .bayes-chart :global(.trial) {
+    fill: none;
+    stroke: var(--colonial);
+    stroke-width: 0.125rem;
+  }
+
+  .bayes-chart :global(.trial.prev) {
+    fill: none;
+    stroke: var(--sienna);
+    opacity: 0.15;
+    stroke-width: 0.125rem;
+  }
+
+  .bayes-chart :global(.trial.final) {
+    stroke: var(--olivine);
+    stroke-width: 0.1875rem;
+    opacity: 1;
+  }
+
+  .stat-line {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+    margin-top: 0.5rem;
+    min-height: 1.2em;
+  }
+
+  .toss-card {
+    padding: 1.25rem;
+  }
+
+  .bayes-tosses :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .bayes-tosses :global(.toss) {
+    font-family: var(--font-mono);
+    font-size: 1.125rem;
+  }
+
+  .bayes-tosses :global(.toss.heads) {
+    fill: var(--sienna);
+
+  .bayes-tosses :global(.toss.tails) {
+    fill: var(--olivine);
+  }
+</style>

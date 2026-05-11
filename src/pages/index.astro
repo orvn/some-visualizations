@@ -21,8 +21,14 @@ const visualizations = [
   {
     title: 'Normal Distribution & Variance',
     description: 'Interactive visualization of normal distribution curves and how variance controls spread.',
-    category: 'Statistics / Probability',
+    category: 'Probability',
     href: '/normals',
+  },
+  {
+    title: 'Beta Posterior',
+    description: 'Bayesian inference on a coin\'s bias using the beta distribution, visualized across 150 sequential flips.',
+    category: 'Probability',
+    href: '/beta-posterior',
   },
 ];
 ---
@@ -43,9 +49,9 @@ const visualizations = [
         {visualizations.map((viz) => (
           <li>
             <a href={viz.href} class="viz-card">
-              <span class="viz-category">{viz.category}</span>
-              <span class="viz-title">{viz.title}</span>
-              <span class="viz-desc">{viz.description}</span>
+              <p class="viz-category">{viz.category}</p>
+              <h2 class="viz-title">{viz.title}</h2>
+              <p class="viz-desc">{viz.description}</p>
             </a>
           </li>
         ))}
@@ -88,6 +94,7 @@ const visualizations = [
     flex-direction: column;
     gap: 0.5rem;
     padding: 1.5rem;
+    height: 100%;
     background: var(--crow);
     border: 0.0625rem solid var(--bronze);
     border-radius: 0.75rem;
@@ -111,6 +118,8 @@ const visualizations = [
   .viz-grid :global(.viz-title) {
     font-family: var(--font-display);
     font-size: var(--text-xl);
+    font-weight: 400;
+    line-height: 1.25;
     color: var(--parchment);
   }
 
@@ -118,5 +127,61 @@ const visualizations = [
     font-size: var(--text-sm);
     color: var(--teak);
     line-height: var(--leading-relaxed);
+    margin-top: auto;
   }
 </style>
+
+<script is:inline>
+(function() {
+  function equalizeCards() {
+    var cards = document.querySelectorAll('.viz-card');
+    if (!cards.length) return;
+
+    // Reset
+    cards.forEach(function(c) {
+      c.style.minHeight = '';
+      var title = c.querySelector('.viz-title');
+      if (title) title.style.minHeight = '';
+    });
+
+    // Group by row
+    var rows = {};
+    cards.forEach(function(card) {
+      var top = Math.round(card.getBoundingClientRect().top);
+      if (!rows[top]) rows[top] = [];
+      rows[top].push(card);
+    });
+
+    Object.keys(rows).forEach(function(key) {
+      var row = rows[key];
+      var maxCard = 0;
+      var maxTitle = 0;
+
+      row.forEach(function(card) {
+        if (card.offsetHeight > maxCard) maxCard = card.offsetHeight;
+        var title = card.querySelector('.viz-title');
+        if (title && title.offsetHeight > maxTitle) maxTitle = title.offsetHeight;
+      });
+
+      row.forEach(function(card) {
+        card.style.minHeight = (maxCard / 16) + 'rem';
+        var title = card.querySelector('.viz-title');
+        if (title) title.style.minHeight = (maxTitle / 16) + 'rem';
+      });
+    });
+  }
+
+  function init() {
+    if (!document.querySelector('.viz-grid')) return;
+    equalizeCards();
+    window.addEventListener('resize', equalizeCards);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  document.addEventListener('astro:page-load', init);
+})();
+</script>
