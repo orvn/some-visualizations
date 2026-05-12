@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { loadGlobal, loadPage } from '../lib/content';
 
 const global = loadGlobal();
-const { meta, content } = loadPage('beta-posterior');
+const { meta, content } = loadPage('poisson');
 const c = content as {
   heading: string;
   eyebrow: string;
@@ -15,7 +15,7 @@ const jsonLD = {
   '@type': 'WebPage',
   name: c.heading,
   description: meta.description,
-  url: global.url + '/beta-posterior',
+  url: global.url + '/poisson',
 };
 ---
 
@@ -27,7 +27,7 @@ const jsonLD = {
 >
 
   <section class="viz-wrap">
-    <div class="viz-container" x-data="bayesBeta">
+    <div class="viz-container" x-data="poissonProcess">
 
       <p class="eyebrow">{c.eyebrow}</p>
       <h1>{c.heading}</h1>
@@ -35,39 +35,39 @@ const jsonLD = {
 
       <div class="card">
         <div class="card-header">
-          <p class="card-label">Posterior distribution</p>
-          <div class="bias-controls">
-            <div class="slider-row">
-              <span class="slider-val" x-text="'bias: ' + parseFloat(bias).toFixed(2)"></span>
-              <input
-                type="range"
-                min="0.01" max="0.99" step="0.01"
-                x-model="bias"
-                x-bind:disabled="running"
-              />
+          <p class="card-label">Arrivals</p>
+          <div class="controls">
+            <div class="slider-group">
+              <span class="slider-val" x-text="'λ = ' + parseFloat(lambda).toFixed(1)"></span>
+              <input type="range" min="0.5" max="8" step="0.5"
+                     x-model="lambda"
+                     x-on:input="simulate()" />
             </div>
-            <button
-              class="btn-start"
-              x-on:click="start()"
-              x-bind:disabled="running"
-              x-text="running ? 'Running...' : 'Start'"
-            ></button>
+            <span class="resample-label" x-show="resampling" x-transition.opacity>resampling</span>
           </div>
         </div>
 
-        <div id="bayesChart" class="bayes-chart"></div>
-        <p class="stat-line" x-text="info || 'set a bias and press start'">&nbsp;</p>
+        <canvas id="poissonTimeline" class="timeline-canvas"></canvas>
+        <p class="stat-line" x-text="info">&nbsp;</p>
       </div>
 
-      <div class="card toss-card" x-show="tosses.length > 0">
-        <p class="card-label">Coin flips</p>
-        <div id="bayesTosses" class="bayes-tosses"></div>
+      <div class="card">
+        <p class="card-label">Cumulative count N(t)</p>
+        <canvas id="poissonStaircase"></canvas>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key properties</p>
+        <ul>
+          <li><strong>Interarrival times are exponential</strong> with rate λ, meaning they're memoryless.</li>
+          <li><strong>N(t) ~ Poisson(λt)</strong>. The count in any interval of length t follows a Poisson distribution.</li>
+          <li><strong>E[N(t)] = Var(N(t)) = λt</strong>. Expectation and variance are equal.</li>
+          <li><strong>Disjoint intervals are independent.</strong> What happens in [0,5] tells you nothing about [5,10].</li>
+        </ul>
       </div>
 
     </div>
   </section>
-
-  <script is:inline src="/js/d3.v3.min.js"></script>
 
 </BaseLayout>
 
@@ -121,6 +121,8 @@ const jsonLD = {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.875rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
 
   .card-label {
@@ -131,17 +133,16 @@ const jsonLD = {
     color: var(--potters-clay);
   }
 
-  .bias-controls {
+  .controls {
     display: flex;
     align-items: center;
     gap: 0.75rem;
   }
 
-  .slider-row {
+  .slider-group {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    flex: 1;
   }
 
   .slider-val {
@@ -149,14 +150,14 @@ const jsonLD = {
     font-size: var(--text-xs);
     font-weight: bold;
     color: var(--colonial);
-    min-width: 5rem;
+    min-width: 3.5rem;
     white-space: nowrap;
   }
 
   input[type=range] {
     -webkit-appearance: none;
     appearance: none;
-    flex: 1;
+    width: 7rem;
     cursor: pointer;
     height: 0.5rem;
     background: transparent;
@@ -197,65 +198,22 @@ const jsonLD = {
     cursor: pointer;
   }
 
-  .btn-start {
-    padding: 0.375rem 1rem;
-    background: var(--bronze);
-    border: 0.0625rem solid var(--potters-clay);
-    border-radius: 0.375rem;
-    color: var(--parchment);
-    font-family: var(--font-sans);
+  .resample-label {
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: background-color var(--transition-fast);
+    color: var(--potters-clay);
+    font-style: italic;
   }
 
-  .btn-start:hover:not(:disabled) {
-    background: var(--potters-clay);
-  }
-
-  .btn-start:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .bayes-chart :global(svg) {
+  .timeline-canvas {
     display: block;
     width: 100%;
-    height: auto;
+    height: 6.5rem;
   }
 
-  .bayes-chart :global(.axis path),
-  .bayes-chart :global(.axis line) {
-    fill: none;
-    stroke: var(--potters-clay);
-    stroke-width: 0.0625rem;
-    shape-rendering: crispEdges;
-  }
-
-  .bayes-chart :global(.axis text) {
-    fill: var(--potters-clay);
-    font-size: 0.6875rem;
-  }
-
-  .bayes-chart :global(.trial) {
-    fill: none;
-    stroke: var(--colonial);
-    stroke-width: 0.125rem;
-  }
-
-  .bayes-chart :global(.trial.prev) {
-    fill: none;
-    stroke: var(--sienna);
-    opacity: 0.15;
-    stroke-width: 0.125rem;
-  }
-
-  .bayes-chart :global(.trial.final) {
-    stroke: var(--olivine);
-    stroke-width: 0.1875rem;
-    opacity: 1;
+  canvas {
+    display: block;
+    width: 100% !important;
   }
 
   .stat-line {
@@ -266,26 +224,20 @@ const jsonLD = {
     min-height: 1.2em;
   }
 
-  .toss-card {
-    padding: 1.25rem;
+  .insight {
+    border-top: 0.0625rem solid var(--bronze);
+    padding-top: 1.25rem;
   }
 
-  .bayes-tosses :global(svg) {
-    display: block;
-    width: 100%;
-    height: auto;
+  .insight ul {
+    color: var(--teak);
+    font-size: var(--text-sm);
+    line-height: 1.9;
+    padding-left: 1.125rem;
   }
 
-  .bayes-tosses :global(.toss) {
-    font-family: var(--font-mono);
-    font-size: 1.125rem;
-  }
-
-  .bayes-tosses :global(.toss.heads) {
-    fill: var(--sienna);
-  }
-
-  .bayes-tosses :global(.toss.tails) {
-    fill: var(--olivine);
+  .insight li strong {
+    color: var(--parchment);
+    font-weight: normal;
   }
 </style>

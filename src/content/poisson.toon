@@ -1,0 +1,11 @@
+meta:
+  title: "Poisson Process"
+  description: Interactive simulation of a Poisson process showing arrivals on a timeline with adjustable rate parameter λ.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Poisson Process"
+  eyebrow: Probability
+  subtitle: "Arrivals over continuous time with rate λ"
