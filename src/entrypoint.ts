@@ -498,26 +498,36 @@ export default (Alpine: Alpine) => {
       ctx.fillText(`λ = ${lambda.toFixed(1)}`, pad.left + plotW, pad.top + 6);
     }
 
-    function buildStaircase(arrivals: number[], maxTime: number) {
-      const canvas = document.getElementById('poissonStaircase') as HTMLCanvasElement | null;
-      if (!canvas) return;
-      const existing = Chart.getChart('poissonStaircase');
-      if (existing) existing.destroy();
-
-      // Build step data
+    function stairData(arrivals: number[], maxTime: number) {
       const data: { x: number; y: number }[] = [{ x: 0, y: 0 }];
       arrivals.forEach((t, i) => {
         data.push({ x: t, y: i });
         data.push({ x: t, y: i + 1 });
       });
       data.push({ x: maxTime, y: arrivals.length });
+      return data;
+    }
+
+    function buildStaircase(arrivals: number[], maxTime: number) {
+      // Update in place if chart exists with same maxTime
+      if (staircaseChart) {
+        staircaseChart.data.datasets[0].data = stairData(arrivals, maxTime);
+        (staircaseChart.options.scales!.x as any).max = maxTime;
+        staircaseChart.update('none');
+        return;
+      }
+
+      const canvas = document.getElementById('poisson-staircase') as HTMLCanvasElement | null;
+      if (!canvas) return;
+      const existing = Chart.getChart('poisson-staircase');
+      if (existing) existing.destroy();
 
       staircaseChart = new Chart(canvas, {
         type: 'line',
         data: {
           datasets: [{
             label: 'N(t)',
-            data,
+            data: stairData(arrivals, maxTime),
             borderColor: '#90b878',
             borderWidth: 2,
             pointRadius: 0,
@@ -556,17 +566,27 @@ export default (Alpine: Alpine) => {
       });
     }
 
+    let animTimer: ReturnType<typeof setTimeout> | null = null;
+    let dotsTimer: ReturnType<typeof setInterval> | null = null;
+    let firstRun = true;
+
+    function cancelAnim() {
+      if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+      if (dotsTimer) { clearInterval(dotsTimer); dotsTimer = null; }
+    }
+
     return {
       lambda: '2',
       duration: '20',
       arrivals: [] as number[],
       info: '',
       resampling: false,
+      resampleText: 'resampling',
 
       init() {
         const self = this;
         const tryInit = () => {
-          timelineCanvas = document.getElementById('poissonTimeline') as HTMLCanvasElement | null;
+          timelineCanvas = document.getElementById('poisson-timeline') as HTMLCanvasElement | null;
           if (!timelineCanvas || timelineCanvas.getBoundingClientRect().width === 0) {
             requestAnimationFrame(tryInit);
             return;
@@ -583,9 +603,17 @@ export default (Alpine: Alpine) => {
       },
 
       simulate() {
+        cancelAnim();
         this.resampling = true;
         const self = this;
-        setTimeout(() => { self.resampling = false; }, 400);
+
+        // Animated dots
+        let dotCount = 0;
+        dotsTimer = setInterval(() => {
+          dotCount = (dotCount + 1) % 4;
+          self.resampleText = 'resampling' + '.'.repeat(dotCount);
+        }, 250);
+
         const rate = parseFloat(this.lambda) || 2;
         const maxT = parseFloat(this.duration) || 20;
         const arr: number[] = [];
@@ -597,13 +625,41 @@ export default (Alpine: Alpine) => {
         }
         this.arrivals = arr;
 
-        const avgGap = arr.length > 1
-          ? (arr[arr.length - 1] / arr.length).toFixed(2)
-          : '—';
-        this.info = `${arr.length} arrivals  ·  avg interarrival: ${avgGap}  ·  expected: ${(1 / rate).toFixed(2)}`;
+        const fast = !firstRun;
+        firstRun = false;
+        const tickMs = fast ? 3 : 20;
 
-        drawTimeline(arr, maxT, rate);
-        buildStaircase(arr, maxT);
+        // Reset staircase chart for fresh build on new simulation
+        if (staircaseChart) { staircaseChart.destroy(); staircaseChart = null; }
+        drawTimeline([], maxT, rate);
+        buildStaircase([], maxT);
+
+        let step = 0;
+        const shown: number[] = [];
+
+        const tick = () => {
+          if (step < arr.length) {
+            shown.push(arr[step]);
+            step++;
+          }
+
+          drawTimeline(shown, maxT, rate);
+          buildStaircase(shown, maxT);
+
+          const avgGap = shown.length > 1
+            ? (shown[shown.length - 1] / shown.length).toFixed(2)
+            : '—';
+          self.info = `${shown.length} arrivals  ·  avg interarrival: ${avgGap}  ·  expected: ${(1 / rate).toFixed(2)}`;
+
+          if (step < arr.length) {
+            animTimer = setTimeout(tick, tickMs);
+          } else {
+            self.resampling = false;
+            if (dotsTimer) { clearInterval(dotsTimer); dotsTimer = null; }
+            animTimer = null;
+          }
+        };
+        animTimer = setTimeout(tick, tickMs);
       },
     };
   });

@@ -37,23 +37,23 @@ const jsonLD = {
         <div class="card-header">
           <p class="card-label">Arrivals</p>
           <div class="controls">
+            <span class="resample-label" x-show="resampling" x-transition.opacity x-text="resampleText"></span>
             <div class="slider-group">
               <span class="slider-val" x-text="'λ = ' + parseFloat(lambda).toFixed(1)"></span>
               <input type="range" min="0.5" max="8" step="0.5"
                      x-model="lambda"
                      x-on:input="simulate()" />
             </div>
-            <span class="resample-label" x-show="resampling" x-transition.opacity>resampling</span>
           </div>
         </div>
 
-        <canvas id="poissonTimeline" class="timeline-canvas"></canvas>
+        <canvas id="poisson-timeline" class="timeline-canvas"></canvas>
         <p class="stat-line" x-text="info">&nbsp;</p>
       </div>
 
       <div class="card">
         <p class="card-label">Cumulative count N(t)</p>
-        <canvas id="poissonStaircase"></canvas>
+        <canvas id="poisson-staircase"></canvas>
       </div>
 
       <div class="insight">
@@ -61,7 +61,7 @@ const jsonLD = {
         <ul>
           <li><strong>Interarrival times are exponential</strong> with rate λ, meaning they're memoryless.</li>
           <li><strong>N(t) ~ Poisson(λt)</strong>. The count in any interval of length t follows a Poisson distribution.</li>
-          <li><strong>E[N(t)] = Var(N(t)) = λt</strong>. Expectation and variance are equal.</li>
+          <li><strong>𝔼[N(t)] = 𝕍(N(t)) = λt</strong>. Expectation and variance are equal.</li>
           <li><strong>Disjoint intervals are independent.</strong> What happens in [0,5] tells you nothing about [5,10].</li>
         </ul>
       </div>
@@ -203,6 +203,7 @@ const jsonLD = {
     font-size: var(--text-xs);
     color: var(--potters-clay);
     font-style: italic;
+    min-width: 7rem;
   }
 
   .timeline-canvas {
