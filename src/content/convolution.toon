@@ -1,0 +1,11 @@
+meta:
+  title: "Convolution"
+  description: Animated flip-and-slide visualization showing how the sum of two independent random variables produces a new distribution.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Convolution"
+  eyebrow: Probability
+  subtitle: "How the sum of independent random variables produces a new distribution"
