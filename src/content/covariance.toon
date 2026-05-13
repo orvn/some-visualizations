@@ -1,0 +1,11 @@
+meta:
+  title: "Covariance"
+  description: Visualize how covariance and correlation describe the tendency of two variables to move together, using a bivariate normal with adjustable ρ.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Covariance"
+  eyebrow: Probability
+  subtitle: "Whether deviations from the mean tend to share a sign"

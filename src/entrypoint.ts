@@ -1,7 +1,7 @@
 import type { Alpine } from 'alpinejs';
-import { Chart, LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement } from 'chart.js';
+import { Chart, LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController } from 'chart.js';
 
-Chart.register(LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement);
+Chart.register(LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController);
 
 const MEAN = 0;
 const X_VALS: number[] = [];
@@ -1307,6 +1307,92 @@ export default (Alpine: Alpine) => {
           (nbChart.options.scales!.xLine as any).min = xMin;
           (nbChart.options.scales!.xLine as any).max = xMax;
           nbChart.update();
+        }
+      },
+    };
+  });
+
+  // Correlation / bivariate normal
+  Alpine.data('correlationViz', () => {
+    let scatterChart: Chart | null = null;
+    const N_POINTS = 600;
+
+    function generateBivariateNormal(rho: number): { x: number; y: number }[] {
+      const points: { x: number; y: number }[] = [];
+      for (let i = 0; i < N_POINTS; i++) {
+        // Box-Muller
+        const u1 = Math.random();
+        const u2 = Math.random();
+        const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
+        // Correlated pair: X = z1, Y = ρz1 + √(1-ρ²)z2
+        const x = z1;
+        const y = rho * z1 + Math.sqrt(1 - rho * rho) * z2;
+        points.push({ x, y });
+      }
+      return points;
+    }
+
+    return {
+      rho: '0',
+      info: '',
+
+      init() {
+        this.render();
+      },
+
+      render() {
+        const rho = parseFloat(this.rho) || 0;
+        const points = generateBivariateNormal(rho);
+
+        const covXY = rho; // since σx = σy = 1
+        this.info = `cov(X,Y) = ${covXY.toFixed(2)}   ρ = ${rho.toFixed(2)}   𝔼[XY] = ${covXY.toFixed(2)}`;
+
+        const canvas = document.getElementById('corr-chart') as HTMLCanvasElement | null;
+        if (!canvas) return;
+
+        if (!scatterChart) {
+          scatterChart = new Chart(canvas, {
+            type: 'scatter',
+            data: {
+              datasets: [{
+                label: '(X, Y)',
+                data: points,
+                backgroundColor: 'rgba(240,216,168,0.35)',
+                borderColor: 'rgba(240,216,168,0.5)',
+                borderWidth: 0.5,
+                pointRadius: 2.5,
+                pointHoverRadius: 3,
+              }],
+            },
+            options: {
+              animation: { duration: 400, easing: 'easeOutQuart' as const },
+              responsive: true, maintainAspectRatio: true, aspectRatio: 1,
+              plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false },
+              },
+              scales: {
+                x: {
+                  min: -4, max: 4,
+                  ticks: { color: '#7a5a3a' },
+                  grid: { color: '#2e1508' },
+                  border: { color: '#3a1a0a' },
+                  title: { display: true, text: 'X', color: '#7a5a3a' },
+                },
+                y: {
+                  min: -4, max: 4,
+                  ticks: { color: '#7a5a3a' },
+                  grid: { color: '#2e1508' },
+                  border: { color: '#3a1a0a' },
+                  title: { display: true, text: 'Y', color: '#7a5a3a' },
+                },
+              },
+            },
+          });
+        } else {
+          scatterChart.data.datasets[0].data = points;
+          scatterChart.update();
         }
       },
     };
