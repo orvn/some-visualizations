@@ -1,0 +1,330 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import TabNav from '../components/TabNav.astro';
+import { loadGlobal, loadPage } from '../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('lln');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/lln',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="llnViz">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-controls" x-on:change="simulate()">
+          <TabNav
+            modelField="dist"
+            options={[
+              { value: 'uniform', label: 'Uniform' },
+              { value: 'bernoulli', label: 'Bernoulli' },
+              { value: 'exponential', label: 'Exponential' },
+            ]}
+          />
+        </div>
+
+        <div class="bound-toggles">
+          <label class="bound-toggle">
+            <input type="checkbox" x-model="showMarkov" x-on:change="simulate()" />
+            <span class="bound-swatch bound-markov"></span>
+            Markov
+          </label>
+          <label class="bound-toggle">
+            <input type="checkbox" x-model="showCheb" x-on:change="simulate()" />
+            <span class="bound-swatch bound-chebyshev"></span>
+            Chebyshev
+          </label>
+          <label class="bound-toggle">
+            <input type="checkbox" x-model="showChernoff" x-on:change="simulate()" />
+            <span class="bound-swatch bound-chernoff"></span>
+            Chernoff
+          </label>
+        </div>
+
+        <div class="confidence-row">
+          <p class="card-label">Convergence with concentration bounds</p>
+          <div class="epsilon-control">
+            <span class="param-label" x-text="(parseFloat(confidence) * 100).toFixed(0) + '%'"></span>
+            <input type="range" min="0.5" max="0.99" step="0.01"
+                   x-model="confidence"
+                   x-on:input="simulate()" />
+          </div>
+        </div>
+        <canvas id="lln-convergence"></canvas>
+
+        <div class="slider-row">
+          <span class="slider-val" x-text="'n = ' + n"></span>
+          <input type="range" min="50" max="1000" step="10"
+                 x-model="n"
+                 x-on:input="simulate()" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <p class="card-label">Tail probability decay</p>
+          <div class="epsilon-control">
+            <span class="param-label" x-text="'ε = ' + parseFloat(epsilon).toFixed(2)"></span>
+            <input type="range" min="0.05" max="0.5" step="0.01"
+                   x-model="epsilon"
+                   x-on:input="simulate()" />
+          </div>
+        </div>
+        <canvas id="lln-decay"></canvas>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Comparing the bounds</p>
+        <ul>
+          <li><strong>Markov</strong> only uses 𝔼[X]. Loosest bound, often doesn't shrink with n for the sample mean.</li>
+          <li><strong>Chebyshev</strong> uses variance. Decays as σ²/(nε²), tighter but still polynomial.</li>
+          <li><strong>Chernoff</strong> uses bounded range. Decays as e^(-2nε²/R²), exponentially fast. Only for bounded distributions.</li>
+          <li><strong>Mₙ → μ</strong> with probability 1 as n → ∞. All bounds confirm this, at different speeds.</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .viz-wrap {
+    padding-block: 2rem 4rem;
+  }
+
+  .viz-container {
+    max-width: 54rem;
+    margin-inline: auto;
+    padding-inline: var(--container-padding);
+  }
+
+  .eyebrow {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: var(--text-3xl);
+    font-weight: normal;
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: 0.5rem;
+    color: var(--parchment);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--teak);
+    font-size: var(--text-sm);
+    margin-bottom: 1.75rem;
+  }
+
+  .card {
+    background: var(--crow);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.25rem 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+
+  .bound-toggles {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .bound-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--teak);
+    cursor: pointer;
+  }
+
+  .bound-toggle input[type=checkbox] {
+    display: none;
+  }
+
+  .bound-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 0.125rem;
+    transition: opacity var(--transition-fast);
+  }
+
+  .bound-toggle input:not(:checked) ~ .bound-swatch {
+    opacity: 0.25;
+  }
+
+  .bound-markov { background: #f07858; }
+  .bound-chebyshev { background: #90b878; }
+  .bound-chernoff { background: #e8a050; }
+
+  .confidence-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .confidence-row .card-label {
+    margin-bottom: 0;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.875rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .card-label {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  .epsilon-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .epsilon-control input[type=range] {
+    width: 7rem;
+  }
+
+  .param-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+    min-width: 4rem;
+    white-space: nowrap;
+  }
+
+  canvas {
+    display: block;
+    width: 100% !important;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.875rem;
+  }
+
+  .slider-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+    font-weight: bold;
+    color: var(--colonial);
+    min-width: 5rem;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    cursor: pointer;
+    height: 0.5rem;
+    background: transparent;
+    padding: 0.75rem 0;
+    margin: 0;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+  }
+
+  input[type=range]::-moz-range-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+    border: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    margin-top: -0.5rem;
+    cursor: pointer;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  .insight {
+    border-top: 0.0625rem solid var(--bronze);
+    padding-top: 1.25rem;
+  }
+
+  .insight ul {
+    color: var(--teak);
+    font-size: var(--text-sm);
+    line-height: 1.9;
+    padding-left: 1.125rem;
+  }
+
+  .insight li strong {
+    color: var(--parchment);
+    font-weight: normal;
+  }
+</style>

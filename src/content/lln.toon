@@ -1,0 +1,11 @@
+meta:
+  title: "Law of Large Numbers"
+  description: Sample mean convergence with Markov, Chebyshev, and Chernoff concentration bounds compared side by side.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Law of Large Numbers"
+  eyebrow: Probability
+  subtitle: "Sample mean convergence and concentration inequality comparison"
