@@ -1,0 +1,78 @@
+---
+interface Props {
+  modelField: string;
+  label?: string;
+}
+
+const { modelField, label } = Astro.props;
+---
+
+<label class="switch">
+  {label && <span class="switch-label" x-bind:class={`{ 'is-active': ${modelField} }`}>{label}</span>}
+  <button
+    type="button"
+    class="switch-track"
+    role="switch"
+    x-bind:aria-checked={`String(${modelField})`}
+    x-bind:class={`{ 'is-on': ${modelField} }`}
+    x-on:click={`${modelField} = !${modelField}; $dispatch('change')`}
+  >
+    <span class="switch-thumb" aria-hidden="true"></span>
+  </button>
+  </label>
+
+<style is:global>
+  .switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .switch-track {
+    position: relative;
+    width: 2.25rem;
+    height: 1.25rem;
+    background: var(--bronze);
+    border: 0.0625rem solid var(--potters-clay);
+    border-radius: 0.625rem;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+    flex-shrink: 0;
+  }
+
+  .switch-track.is-on {
+    background: var(--potters-clay);
+    border-color: var(--teak);
+  }
+
+  .switch-thumb {
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--parchment);
+    border-radius: 50%;
+    transition: transform var(--transition-fast);
+    pointer-events: none;
+  }
+
+  .switch-track.is-on .switch-thumb {
+    transform: translateX(1rem);
+  }
+
+  .switch-label {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--potters-clay);
+    transition: color var(--transition-fast);
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .switch-label.is-active {
+    color: var(--parchment);
+  }
+</style>
