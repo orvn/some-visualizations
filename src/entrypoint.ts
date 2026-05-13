@@ -1336,6 +1336,7 @@ export default (Alpine: Alpine) => {
     return {
       rho: '0',
       info: '',
+      accentColor: '#f0d8a8',
 
       init() {
         this.render();
@@ -1347,6 +1348,20 @@ export default (Alpine: Alpine) => {
 
         const covXY = rho; // since σx = σy = 1
         this.info = `cov(X,Y) = ${covXY.toFixed(2)}   ρ = ${rho.toFixed(2)}   𝔼[XY] = ${covXY.toFixed(2)}`;
+
+        // Interpolate color: sienna(-1) → colonial(0) → olivine(+1)
+        const colonial = [240, 216, 168];
+        const olivine = [144, 184, 120];
+        const sienna = [240, 120, 88];
+        const raw = Math.abs(rho);
+        const t = raw < 0.5 ? 0 : (raw - 0.5) * 2; // no color shift until |ρ| > 0.5
+        const target = rho >= 0 ? olivine : sienna;
+        const r = Math.round(colonial[0] + (target[0] - colonial[0]) * t);
+        const g = Math.round(colonial[1] + (target[1] - colonial[1]) * t);
+        const b = Math.round(colonial[2] + (target[2] - colonial[2]) * t);
+        const dotBg = `rgba(${r},${g},${b},0.35)`;
+        const dotBorder = `rgba(${r},${g},${b},0.5)`;
+        this.accentColor = `rgb(${r},${g},${b})`;
 
         const canvas = document.getElementById('corr-chart') as HTMLCanvasElement | null;
         if (!canvas) return;
@@ -1392,6 +1407,8 @@ export default (Alpine: Alpine) => {
           });
         } else {
           scatterChart.data.datasets[0].data = points;
+          (scatterChart.data.datasets[0] as any).backgroundColor = dotBg;
+          (scatterChart.data.datasets[0] as any).borderColor = dotBorder;
           scatterChart.update();
         }
       },
