@@ -1981,13 +1981,13 @@ export default (Alpine: Alpine) => {
         formula: 'f(x) = x^(k/2−1) e^(−x/2) / (2^(k/2) Γ(k/2))\n𝔼[X] = k\n𝕍(X) = 2k',
         description: 'The sum of k squared independent standard normal random variables: χ²ₖ = Z₁² + Z₂² + ⋯ + Zₖ². A special case of the Gamma distribution with α = k/2 and β = 1/2. Central to hypothesis testing (goodness-of-fit, independence tests) and constructing confidence intervals for variance.',
       },
-      studentt: { name: 'Student\'s t', type: 'continuous',
+      studentt: { name: 't-distribution', type: 'continuous',
         params: [{ key: 'nu', label: 'ν (df)', min: 1, max: 30, step: 1, default: 5 }],
         pdf: (x, p) => { const v = p.nu; return (gamma((v + 1) / 2) / (Math.sqrt(v * Math.PI) * gamma(v / 2))) * Math.pow(1 + x * x / v, -(v + 1) / 2); },
         range: () => [-6, 6],
-        mean: (p) => p.nu > 1 ? '0' : 'undefined', variance: (p) => p.nu > 2 ? `${(p.nu / (p.nu - 2)).toFixed(4)}` : 'undefined',
+        mean: (p) => p.nu > 1 ? '0' : '∄', variance: (p) => p.nu > 2 ? `${(p.nu / (p.nu - 2)).toFixed(4)}` : p.nu > 1 ? '∞' : '∄',
         formula: 'f(x) = Γ((ν+1)/2) / (√(νπ)Γ(ν/2)) · (1+x²/ν)^(−(ν+1)/2)\n𝔼[X] = 0 (ν > 1)\n𝕍(X) = ν/(ν−2) (ν > 2)',
-        description: 'Arises when estimating the mean of a normally distributed population with unknown variance using a small sample. Heavier tails than the normal, but converges to N(0,1) as the degrees of freedom ν → ∞. When ν ≤ 30, t-tables are used instead of normal tables for confidence intervals. Named after William Gosset, who published under the pseudonym "Student."',
+        description: 'When estimating the mean with unknown variance, the normalized statistic Tₙ = √n(Θ̂ₙ−θ)/Sₙ is not normal because Sₙ is itself random. Its exact distribution is the t-distribution with n−1 degrees of freedom: symmetric and bell-shaped like the normal, but more spread out with heavier tails. As ν → ∞ it converges to N(0,1). Published in 1908 by William Gosset under the pseudonym "Student" while working at the Guinness brewery in Dublin on barley yield analysis with small samples.',
       },
       cauchy: { name: 'Cauchy', type: 'continuous',
         params: [{ key: 'x0', label: 'x₀', min: -5, max: 5, step: 0.5, default: 0 }, { key: 'gam', label: 'γ', min: 0.1, max: 5, step: 0.1, default: 1 }],
@@ -2042,6 +2042,165 @@ export default (Alpine: Alpine) => {
 
     const discreteKeys = Object.keys(dists).filter(k => dists[k].type === 'discrete');
     const continuousKeys = Object.keys(dists).filter(k => dists[k].type === 'continuous');
+
+    let polarAnimId: number | null = null;
+
+    function renderPolar(distKey: string, paramVals: Record<string, number>) {
+      if (polarAnimId) { cancelAnimationFrame(polarAnimId); polarAnimId = null; }
+      const canvas = document.getElementById('rv-polar') as HTMLCanvasElement | null;
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const W = rect.width;
+      const H = rect.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const cx = W / 2;
+      const cy = H / 2;
+      const maxR = Math.min(cx, cy) - 20;
+
+      if (distKey === 'rayleigh') {
+        const sigma = paramVals.sigma || 1;
+        const points: [number, number][] = [];
+        for (let i = 0; i < 400; i++) {
+          const u1 = Math.random(), u2 = Math.random();
+          const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * sigma;
+          const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2) * sigma;
+          points.push([z1, z2]);
+        }
+        const scale = maxR / (4 * sigma);
+
+        // Static elements: rings, axes, labels
+        ctx.strokeStyle = 'rgba(58,26,10,0.5)';
+        ctx.lineWidth = 0.5;
+        for (let r = 1; r <= 3; r++) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * sigma * scale, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = '#7a5a3a';
+          ctx.font = '10px system-ui, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(`${r}σ`, cx + r * sigma * scale + 3, cy - 3);
+        }
+        ctx.strokeStyle = 'rgba(58,26,10,0.3)';
+        ctx.beginPath();
+        ctx.moveTo(cx - maxR, cy); ctx.lineTo(cx + maxR, cy);
+        ctx.moveTo(cx, cy - maxR); ctx.lineTo(cx, cy + maxR);
+        ctx.stroke();
+        ctx.fillStyle = '#b89470';
+        ctx.font = '11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('R = √(X²+Y²) ~ Rayleigh(σ)', cx, H - 6);
+
+        // Animate points appearing
+        let shown = 0;
+        const perFrame = 6;
+        const tick = () => {
+          const end = Math.min(shown + perFrame, points.length);
+          for (let i = shown; i < end; i++) {
+            const [x, y] = points[i];
+            ctx.fillStyle = 'rgba(240,216,168,0.3)';
+            ctx.beginPath();
+            ctx.arc(cx + x * scale, cy - y * scale, 2, 0, Math.PI * 2);
+            ctx.fill();
+            if (i < 15) {
+              ctx.strokeStyle = 'rgba(240,120,88,0.4)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(cx, cy);
+              ctx.lineTo(cx + x * scale, cy - y * scale);
+              ctx.stroke();
+            }
+          }
+          shown = end;
+          if (shown < points.length) {
+            polarAnimId = requestAnimationFrame(tick);
+          } else {
+            polarAnimId = null;
+          }
+        };
+        polarAnimId = requestAnimationFrame(tick);
+      }
+
+      if (distKey === 'cauchy') {
+        const gam = paramVals.gam || 1;
+        const circR = maxR * 0.6;
+        const lineY = cy + circR + 30;
+
+        // Static: semicircle, line, labels, center
+        ctx.strokeStyle = '#b89470';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, circR, Math.PI, 0);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(58,26,10,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(20, lineY);
+        ctx.lineTo(W - 20, lineY);
+        ctx.stroke();
+        ctx.fillStyle = '#f0d8a8';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#b89470';
+        ctx.font = '11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('uniform angle θ', cx, cy - circR - 8);
+        ctx.fillText('tan(θ) ~ Cauchy', cx, lineY + 16);
+        ctx.fillStyle = '#7a5a3a';
+        ctx.font = '10px system-ui, sans-serif';
+        ctx.fillText('angles near ±π/2 → extreme values', cx, lineY + 30);
+
+        // Animate projections one by one
+        const angles: number[] = [];
+        for (let i = 0; i < 25; i++) {
+          angles.push(Math.PI * (0.05 + 0.9 * Math.random()));
+        }
+        angles.sort();
+
+        let shown = 0;
+        const tick = () => {
+          if (shown >= angles.length) { polarAnimId = null; return; }
+          const a = angles[shown];
+          const i = shown;
+          const px = cx + circR * Math.cos(a);
+          const py = cy - circR * Math.sin(a);
+          const projX = cx + circR / Math.tan(a) * gam;
+
+          ctx.fillStyle = '#f0d8a8';
+          ctx.beginPath();
+          ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Projection line
+          const clampedProjX = Math.max(20, Math.min(W - 20, projX));
+          ctx.strokeStyle = i % 3 === 0 ? 'rgba(240,120,88,0.35)' : 'rgba(184,148,112,0.15)';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(clampedProjX, lineY);
+          ctx.stroke();
+
+          // Point on line
+          ctx.fillStyle = i % 3 === 0 ? '#f07858' : 'rgba(240,216,168,0.4)';
+          ctx.beginPath();
+          ctx.arc(clampedProjX, lineY, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          shown++;
+          polarAnimId = window.setTimeout(() => {
+            polarAnimId = requestAnimationFrame(tick) as any;
+          }, 60) as any;
+        };
+        polarAnimId = requestAnimationFrame(tick);
+      }
+    }
 
     function renderChart(distKey: string, paramVals: Record<string, number>) {
       const d = dists[distKey];
@@ -2205,6 +2364,11 @@ export default (Alpine: Alpine) => {
         this.distMean = d.mean(this.paramValues);
         this.distVar = d.variance(this.paramValues);
         renderChart(this.selected, this.paramValues);
+        const self = this;
+        if (this.selected === 'rayleigh' || this.selected === 'cauchy') {
+          // Defer to allow x-show to make canvas visible first
+          setTimeout(() => renderPolar(self.selected, self.paramValues), 50);
+        }
       },
 
       setParam(key: string, val: string) {
