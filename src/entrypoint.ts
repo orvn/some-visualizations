@@ -1809,6 +1809,205 @@ export default (Alpine: Alpine) => {
     };
   });
 
+  // Confidence intervals coverage
+  Alpine.data('confidenceViz', () => {
+    let ciCanvas: HTMLCanvasElement | null = null;
+    let ciCtx: CanvasRenderingContext2D | null = null;
+
+    const TRUE_MU = 0;
+    const TRUE_SIGMA = 1;
+    const NUM_EXPERIMENTS = 50;
+
+    // Standard normal quantile approximation (Abramowitz & Stegun)
+    function zQuantile(p: number): number {
+      if (p <= 0 || p >= 1) return 0;
+      const a = p < 0.5 ? p : 1 - p;
+      const t = Math.sqrt(-2 * Math.log(a));
+      const z = t - (2.515517 + 0.802853 * t + 0.010328 * t * t) / (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t);
+      return p < 0.5 ? -z : z;
+    }
+
+    function boxMuller(): number {
+      const u1 = Math.random();
+      const u2 = Math.random();
+      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+
+    function runExperiments(n: number, confidence: number) {
+      const alpha = 1 - confidence;
+      const z = zQuantile(1 - alpha / 2);
+      const experiments: { mean: number; lo: number; hi: number; captured: boolean }[] = [];
+
+      for (let i = 0; i < NUM_EXPERIMENTS; i++) {
+        let sum = 0;
+        for (let j = 0; j < n; j++) {
+          sum += TRUE_MU + TRUE_SIGMA * boxMuller();
+        }
+        const mean = sum / n;
+        const margin = z * TRUE_SIGMA / Math.sqrt(n);
+        const lo = mean - margin;
+        const hi = mean + margin;
+        experiments.push({ mean, lo, hi, captured: lo <= TRUE_MU && hi >= TRUE_MU });
+      }
+      return experiments;
+    }
+
+    let ciAnimId: number | null = null;
+
+    function drawCI(experiments: { mean: number; lo: number; hi: number; captured: boolean }[], showCount?: number) {
+      const count = showCount ?? experiments.length;
+      if (!ciCtx || !ciCanvas) return;
+      const W = ciCanvas.getBoundingClientRect().width;
+      const H = ciCanvas.getBoundingClientRect().height;
+      const ctx = ciCtx;
+      ctx.clearRect(0, 0, W * 3, H * 3);
+
+      const pad = { left: 40, right: 20, top: 30, bottom: 25 };
+      const plotW = W - pad.left - pad.right;
+      const plotH = H - pad.top - pad.bottom;
+
+      // Find x range
+      let xMin = Infinity;
+      let xMax = -Infinity;
+      for (const e of experiments) {
+        if (e.lo < xMin) xMin = e.lo;
+        if (e.hi > xMax) xMax = e.hi;
+      }
+      const xPadding = (xMax - xMin) * 0.05;
+      xMin -= xPadding;
+      xMax += xPadding;
+
+      const toX = (v: number) => pad.left + ((v - xMin) / (xMax - xMin)) * plotW;
+      const gap = 3;
+      const rowH = (plotH - gap * (NUM_EXPERIMENTS - 1)) / NUM_EXPERIMENTS;
+      const barH = rowH;
+      const bracketH = 0;
+
+      // True parameter vertical line
+      const trueX = toX(TRUE_MU);
+      ctx.strokeStyle = 'rgba(240,216,168,0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(trueX, pad.top);
+      ctx.lineTo(trueX, pad.top + plotH);
+      ctx.stroke();
+
+      // θ label at top
+      ctx.fillStyle = '#f0d8a8';
+      ctx.font = '12px ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`θ = ${TRUE_MU}`, trueX, pad.top - 10);
+
+      // Draw intervals as bracket-style lines
+      for (let i = 0; i < count; i++) {
+        const e = experiments[i];
+        const y = pad.top + i * (rowH + gap) + rowH / 2;
+        const x1 = toX(e.lo);
+        const x2 = toX(e.hi);
+        const col = e.captured ? '#90b878' : '#f07858';
+        const colFill = e.captured ? 'rgba(144,184,120,0.45)' : 'rgba(240,120,88,0.45)';
+
+        // Filled bar
+        ctx.fillStyle = colFill;
+        ctx.fillRect(x1, y - barH / 2, x2 - x1, barH);
+
+        // Border
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x1, y - barH / 2, x2 - x1, barH);
+
+        // Estimate dot
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(toX(e.mean), y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // θ dot on axis
+      ctx.fillStyle = '#f0d8a8';
+      ctx.beginPath();
+      ctx.arc(trueX, pad.top + plotH + 8, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Number line at bottom
+      ctx.strokeStyle = '#3a1a0a';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top + plotH + 8);
+      ctx.lineTo(pad.left + plotW, pad.top + plotH + 8);
+      ctx.stroke();
+
+      // Ticks
+      ctx.fillStyle = '#7a5a3a';
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      const step = Math.max(1, Math.ceil((xMax - xMin) / 10));
+      for (let v = Math.ceil(xMin); v <= xMax; v += step) {
+        const px = toX(v);
+        ctx.beginPath();
+        ctx.moveTo(px, pad.top + plotH + 5);
+        ctx.lineTo(px, pad.top + plotH + 11);
+        ctx.stroke();
+        ctx.fillText(String(v), px, pad.top + plotH + 22);
+      }
+    }
+
+    return {
+      n: '25',
+      confidence: '0.95',
+      captured: 0,
+      missed: 0,
+      pct: '',
+
+      init() {
+        const self = this;
+        const tryInit = () => {
+          ciCanvas = document.getElementById('ci-chart') as HTMLCanvasElement | null;
+          if (!ciCanvas || ciCanvas.getBoundingClientRect().width === 0) {
+            requestAnimationFrame(tryInit);
+            return;
+          }
+          const dpr = window.devicePixelRatio || 1;
+          const rect = ciCanvas.getBoundingClientRect();
+          ciCanvas.width = rect.width * dpr;
+          ciCanvas.height = rect.height * dpr;
+          ciCtx = ciCanvas.getContext('2d');
+          if (ciCtx) ciCtx.scale(dpr, dpr);
+          self.simulate();
+        };
+        requestAnimationFrame(tryInit);
+      },
+
+      simulate() {
+        if (ciAnimId) { cancelAnimationFrame(ciAnimId); ciAnimId = null; }
+
+        const n = parseInt(this.n) || 25;
+        const conf = parseFloat(this.confidence) || 0.95;
+        const experiments = runExperiments(n, conf);
+        this.captured = experiments.filter(e => e.captured).length;
+        this.missed = NUM_EXPERIMENTS - this.captured;
+        this.pct = ((this.captured / NUM_EXPERIMENTS) * 100).toFixed(0);
+
+        let shown = 0;
+        const perFrame = 2;
+
+        const tick = () => {
+          shown = Math.min(shown + perFrame, NUM_EXPERIMENTS);
+          drawCI(experiments, shown);
+
+          if (shown < NUM_EXPERIMENTS) {
+            ciAnimId = window.setTimeout(() => {
+              ciAnimId = requestAnimationFrame(tick) as any;
+            }, 12) as any;
+          } else {
+            ciAnimId = null;
+          }
+        };
+        tick();
+      },
+    };
+  });
+
   // Correlation / bivariate normal
   Alpine.data('correlationViz', () => {
     let scatterChart: Chart | null = null;

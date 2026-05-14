@@ -1,0 +1,11 @@
+meta:
+  title: "Confidence Intervals"
+  description: Run 100 experiments to see how confidence intervals capture the true parameter. The frequentist interpretation, visualized.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Confidence Intervals"
+  eyebrow: Probability
+  subtitle: "What a 95% confidence level actually means across repeated experiments"

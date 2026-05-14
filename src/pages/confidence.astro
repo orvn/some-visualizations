@@ -1,0 +1,264 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('confidence');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/confidence',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="confidenceViz">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header">
+          <p class="card-label">50 experiments</p>
+          <div class="coverage-stats">
+            <span class="stat-captured" x-text="captured + ' captured'"></span>
+            <span class="stat-missed" x-text="missed + ' missed'"></span>
+            <span class="stat-pct" x-text="pct + '% coverage'"></span>
+          </div>
+        </div>
+
+        <canvas id="ci-chart" class="ci-canvas"></canvas>
+
+        <div class="controls-row">
+          <div class="slider-row">
+            <span class="slider-val" x-text="'n = ' + n"></span>
+            <input type="range" min="5" max="200" step="5"
+                   x-model="n"
+                   x-on:change="simulate()" />
+          </div>
+          <div class="slider-row">
+            <span class="slider-val" x-text="(parseFloat(confidence) * 100).toFixed(0) + '%'"></span>
+            <input type="range" min="0.5" max="0.99" step="0.01"
+                   x-model="confidence"
+                   x-on:change="simulate()" />
+          </div>
+          <button class="btn-resample" x-on:click="simulate()">Resample</button>
+        </div>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key ideas</p>
+        <ul>
+          <li><strong>A 95% CI does not mean</strong> there's a 95% chance μ is inside this interval. μ is fixed.</li>
+          <li><strong>It means:</strong> if you repeat the experiment many times, ~95% of intervals will capture μ.</li>
+          <li><strong>Larger n</strong> → narrower intervals (more precise), same coverage rate.</li>
+          <li><strong>Higher confidence</strong> → wider intervals (less precise), fewer misses.</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .viz-wrap {
+    padding-block: 2rem 4rem;
+  }
+
+  .viz-container {
+    max-width: 54rem;
+    margin-inline: auto;
+    padding-inline: var(--container-padding);
+  }
+
+  .eyebrow {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: var(--text-3xl);
+    font-weight: normal;
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: 0.5rem;
+    color: var(--parchment);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--teak);
+    font-size: var(--text-sm);
+    margin-bottom: 1.75rem;
+  }
+
+  .card {
+    background: var(--crow);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.25rem 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .card-label {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--potters-clay);
+  }
+
+  .coverage-stats {
+    display: flex;
+    gap: 1rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+
+  .stat-captured { color: var(--olivine); }
+  .stat-missed { color: var(--sienna); }
+  .stat-pct { color: var(--colonial); }
+
+  .ci-canvas {
+    display: block;
+    width: 100%;
+    height: 28rem;
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 10rem;
+  }
+
+  .slider-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: bold;
+    color: var(--colonial);
+    min-width: 3.5rem;
+    white-space: nowrap;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    cursor: pointer;
+    height: 0.5rem;
+    background: transparent;
+    padding: 0.75rem 0;
+    margin: 0;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+  }
+
+  input[type=range]::-moz-range-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+    border: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    margin-top: -0.5rem;
+    cursor: pointer;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-resample {
+    padding: 0.375rem 1rem;
+    background: var(--bronze);
+    border: 0.0625rem solid var(--potters-clay);
+    border-radius: 0.375rem;
+    color: var(--parchment);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .btn-resample:hover {
+    background: var(--potters-clay);
+  }
+
+  .insight {
+    border-top: 0.0625rem solid var(--bronze);
+    padding-top: 1.25rem;
+  }
+
+  .insight ul {
+    color: var(--teak);
+    font-size: var(--text-sm);
+    line-height: 1.9;
+    padding-left: 1.125rem;
+  }
+
+  .insight li strong {
+    color: var(--parchment);
+    font-weight: normal;
+  }
+</style>
