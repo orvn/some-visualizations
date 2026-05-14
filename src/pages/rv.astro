@@ -80,7 +80,11 @@ const jsonLD = {
             </div>
 
             <div class="rv-info">
-              <p class="rv-formula" x-text="currentDist?.formula"></p>
+              <div class="rv-formulas">
+                <span class="rv-formula-box rv-formula-pmf" x-text="fLine0"></span>
+                <span class="rv-formula-box" x-show="fLine1" x-text="fLine1"></span>
+                <span class="rv-formula-box" x-show="fLine2" x-text="fLine2"></span>
+              </div>
               <p class="rv-desc" x-text="currentDist?.description"></p>
             </div>
           </div>
@@ -313,11 +317,26 @@ const jsonLD = {
     padding-top: 0.75rem;
   }
 
-  .rv-formula {
+  .rv-formulas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .rv-formula-box {
+    display: inline-block;
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.375rem;
+    padding: 0.3125rem 0.625rem;
+    background: var(--graphite);
     font-family: var(--font-mono);
     font-size: var(--text-sm);
-    color: var(--potters-clay);
-    margin-bottom: 0.5rem;
+    color: var(--colonial);
+  }
+
+  .rv-formula-pmf {
+    color: var(--parchment);
   }
 
   .rv-desc {
