@@ -1867,13 +1867,13 @@ export default (Alpine: Alpine) => {
         formula: 'ℙ(X=k) = (1−p)^(k−1) p, k = 1,2,3,…',
         description: 'Number of trials until the first success. Memoryless: past failures don\'t affect future probability.',
       },
-      pascal: { name: 'Pascal / Neg. Binomial', type: 'discrete',
+      pascal: { name: 'Pascal', type: 'discrete',
         params: [{ key: 'r', label: 'r', min: 1, max: 10, step: 1, default: 3 }, { key: 'p', label: 'p', min: 0.01, max: 0.99, step: 0.01, default: 0.4 }],
         pmf: (k, p) => k < p.r || k !== Math.floor(k) ? 0 : comb(k - 1, p.r - 1) * Math.pow(p.p, p.r) * Math.pow(1 - p.p, k - p.r),
         range: (p) => [p.r - 0.5, p.r + 25],
         mean: (p) => `${(p.r / p.p).toFixed(2)}`, variance: (p) => `${(p.r * (1 - p.p) / (p.p * p.p)).toFixed(2)}`,
         formula: 'ℙ(X=k) = C(k−1,r−1) p^r (1−p)^(k−r)',
-        description: 'Number of trials until the rth success. Generalizes the geometric distribution.',
+        description: 'Also called the negative binomial. Number of trials until the rth success. Generalizes the geometric distribution.',
       },
       poisson: { name: 'Poisson', type: 'discrete',
         params: [{ key: 'lam', label: 'λ', min: 0.1, max: 20, step: 0.1, default: 4 }],
@@ -1887,7 +1887,7 @@ export default (Alpine: Alpine) => {
         params: [{ key: 'a', label: 'a', min: 0, max: 10, step: 1, default: 1 }, { key: 'b', label: 'b', min: 1, max: 20, step: 1, default: 6 }],
         pmf: (k, p) => k < p.a || k > p.b || k !== Math.floor(k) ? 0 : 1 / (p.b - p.a + 1),
         range: (p) => [p.a - 0.5, p.b + 0.5],
-        mean: (p) => `${((p.a + p.b) / 2).toFixed(1)}`, variance: (p) => `${Math.pow((((p.b - p.a + 1), 2) - 1) / 12).toFixed(2)}`,
+        mean: (p) => `${((p.a + p.b) / 2).toFixed(1)}`, variance: (p) => `${((Math.pow(p.b - p.a + 1, 2) - 1) / 12).toFixed(2)}`,
         formula: 'ℙ(X=k) = 1/(b−a+1), k = a,a+1,…,b',
         description: 'Each integer in [a,b] is equally likely. A fair die is Uniform(1,6).',
       },
@@ -1917,11 +1917,11 @@ export default (Alpine: Alpine) => {
         description: 'Power-law distribution. Models word frequencies, city populations, wealth. Heavy-tailed.',
       },
       // CONTINUOUS
-      uniform: { name: 'Uniform (cont.)', type: 'continuous',
+      uniform: { name: 'Continuous Uniform', type: 'continuous',
         params: [{ key: 'a', label: 'a', min: -5, max: 5, step: 0.5, default: 0 }, { key: 'b', label: 'b', min: -5, max: 10, step: 0.5, default: 1 }],
         pdf: (x, p) => x >= p.a && x <= p.b ? 1 / (p.b - p.a) : 0,
         range: (p) => [p.a - 1, p.b + 1],
-        mean: (p) => `${((p.a + p.b) / 2).toFixed(2)}`, variance: (p) => `${Math.pow((((p.b - p.a), 2)) / 12).toFixed(4)}`,
+        mean: (p) => `${((p.a + p.b) / 2).toFixed(2)}`, variance: (p) => `${(Math.pow(p.b - p.a, 2) / 12).toFixed(4)}`,
         formula: 'f(x) = 1/(b−a), a ≤ x ≤ b',
         description: 'Every value in [a,b] is equally likely. The simplest continuous distribution.',
       },
@@ -1933,13 +1933,13 @@ export default (Alpine: Alpine) => {
         formula: 'f(x) = λe^(−λx), x ≥ 0',
         description: 'Time until next event in a Poisson process. Memoryless: ℙ(X > s+t | X > s) = ℙ(X > t).',
       },
-      normal: { name: 'Normal / Gaussian', type: 'continuous',
+      normal: { name: 'Normal', type: 'continuous',
         params: [{ key: 'mu', label: 'μ', min: -5, max: 5, step: 0.1, default: 0 }, { key: 'sigma', label: 'σ', min: 0.1, max: 4, step: 0.1, default: 1 }],
         pdf: (x, p) => normalPdfRV(x, p.mu, p.sigma),
         range: (p) => [p.mu - 4 * p.sigma, p.mu + 4 * p.sigma],
         mean: (p) => `${p.mu.toFixed(2)}`, variance: (p) => `${(Math.pow(p.sigma, 2)).toFixed(4)}`,
         formula: 'f(x) = (1/σ√2π) exp(−(x−μ)²/2σ²)',
-        description: 'The bell curve. Arises from the CLT as the limit of sums of i.i.d. random variables.',
+        description: 'The Gaussian bell curve. Arises from the CLT as the limit of sums of i.i.d. random variables.',
       },
       erlang: { name: 'Erlang', type: 'continuous',
         params: [{ key: 'k', label: 'k', min: 1, max: 15, step: 1, default: 3 }, { key: 'lam', label: 'λ', min: 0.1, max: 5, step: 0.1, default: 1 }],
@@ -1961,7 +1961,7 @@ export default (Alpine: Alpine) => {
         params: [{ key: 'alpha', label: 'α', min: 0.1, max: 10, step: 0.1, default: 2 }, { key: 'beta', label: 'β', min: 0.1, max: 10, step: 0.1, default: 5 }],
         pdf: (x, p) => { if (x <= 0 || x >= 1) return 0; const B = gamma(p.alpha) * gamma(p.beta) / gamma(p.alpha + p.beta); return Math.pow(x, p.alpha - 1) * Math.pow(1 - x, p.beta - 1) / B; },
         range: () => [-0.05, 1.05],
-        mean: (p) => `${(p.alpha / (p.alpha + p.beta)).toFixed(4)}`, variance: (p) => `${Math.pow((p.alpha * p.beta / ((p.alpha + p.beta), 2) * (p.alpha + p.beta + 1))).toFixed(4)}`,
+        mean: (p) => `${(p.alpha / (p.alpha + p.beta)).toFixed(4)}`, variance: (p) => `${(p.alpha * p.beta / (Math.pow(p.alpha + p.beta, 2) * (p.alpha + p.beta + 1))).toFixed(4)}`,
         formula: 'f(x) = x^(α−1)(1−x)^(β−1) / B(α,β)',
         description: 'Defined on [0,1]. Conjugate prior for Bernoulli/Binomial. Can be U-shaped, uniform, or bell-shaped.',
       },
@@ -2001,7 +2001,7 @@ export default (Alpine: Alpine) => {
         params: [{ key: 'k', label: 'k', min: 0.5, max: 5, step: 0.1, default: 1.5 }, { key: 'lam', label: 'λ', min: 0.5, max: 5, step: 0.1, default: 1 }],
         pdf: (x, p) => x < 0 ? 0 : (p.k / p.lam) * Math.pow(x / p.lam, p.k - 1) * Math.exp(-Math.pow(x / p.lam, p.k)),
         range: (p) => [0, p.lam * 3],
-        mean: (p) => `${(p.lam * gamma(1 + 1 / p.k)).toFixed(4)}`, variance: (p) => `${(Math.pow(p.lam, 2) * (gamma(1 + 2 / p.k) - gammaMath.pow((1 + 1 / p.k), 2))).toFixed(4)}`,
+        mean: (p) => `${(p.lam * gamma(1 + 1 / p.k)).toFixed(4)}`, variance: (p) => `${(Math.pow(p.lam, 2) * (gamma(1 + 2 / p.k) - Math.pow(gamma(1 + 1 / p.k), 2))).toFixed(4)}`,
         formula: 'f(x) = (k/λ)(x/λ)^(k−1) exp(−(x/λ)^k)',
         description: 'Models time-to-failure. k<1: decreasing hazard, k=1: exponential, k>1: increasing hazard.',
       },
@@ -2010,7 +2010,7 @@ export default (Alpine: Alpine) => {
         pdf: (x, p) => x < p.xm ? 0 : p.alpha * Math.pow(p.xm, p.alpha) / Math.pow(x, p.alpha + 1),
         range: (p) => [0, p.xm * 8],
         mean: (p) => p.alpha > 1 ? `${(p.alpha * p.xm / (p.alpha - 1)).toFixed(4)}` : '∞',
-        variance: (p) => p.alpha > 2 ? `${(Math.pow(p.xm, 2) * p.alpha / Math.pow(((p.alpha - 1), 2) * (p.alpha - 2))).toFixed(4)}` : '∞',
+        variance: (p) => p.alpha > 2 ? `${(Math.pow(p.xm, 2) * p.alpha / (Math.pow(p.alpha - 1, 2) * (p.alpha - 2))).toFixed(4)}` : '∞',
         formula: 'f(x) = αxₘ^α / x^(α+1), x ≥ xₘ',
         description: 'Power-law tail. Models wealth (80/20 rule), file sizes, earthquake magnitudes.',
       },
@@ -2032,7 +2032,7 @@ export default (Alpine: Alpine) => {
       },
       logistic: { name: 'Logistic', type: 'continuous',
         params: [{ key: 'mu', label: 'μ', min: -5, max: 5, step: 0.5, default: 0 }, { key: 's', label: 's', min: 0.1, max: 3, step: 0.1, default: 1 }],
-        pdf: (x, p) => { const e = Math.exp(-(x - p.mu) / p.s); return e / Math.pow((p.s * (1 + e), 2)); },
+        pdf: (x, p) => { const e = Math.exp(-(x - p.mu) / p.s); return e / (p.s * Math.pow(1 + e, 2)); },
         range: (p) => [p.mu - 8 * p.s, p.mu + 8 * p.s],
         mean: (p) => `${p.mu.toFixed(2)}`, variance: (p) => `${((Math.pow(Math.PI, 2) * Math.pow(p.s, 2)) / 3).toFixed(4)}`,
         formula: 'f(x) = e^(−(x−μ)/s) / (s(1+e^(−(x−μ)/s))²)',
@@ -2053,6 +2053,8 @@ export default (Alpine: Alpine) => {
       const [xMin, xMax] = d.range(paramVals);
       const datasets: any[] = [];
 
+      const needsRebuild = !rvChart || (d.type === 'discrete' && (rvChart.config as any).type !== 'bar') || (d.type === 'continuous' && (rvChart.config as any).type !== 'line');
+
       if (d.type === 'discrete' && d.pmf) {
         const ks: number[] = [];
         const vals: number[] = [];
@@ -2060,60 +2062,59 @@ export default (Alpine: Alpine) => {
           ks.push(k);
           vals.push(d.pmf(k, paramVals));
         }
-        datasets.push({
-          type: 'bar',
-          label: 'PMF',
-          data: vals,
-          backgroundColor: '#f0d8a8',
-          borderColor: '#f0d8a8',
-          borderWidth: 1,
-          barPercentage: 0.6,
-          categoryPercentage: 0.6,
-        });
-        if (rvChart) { rvChart.destroy(); rvChart = null; }
-        rvChart = new Chart(canvas, {
-          type: 'bar',
-          data: { labels: ks, datasets },
-          options: {
-            animation: { duration: 300, easing: 'easeOutQuart' as const },
-            responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
-            plugins: { legend: { display: false }, tooltip: { enabled: false } },
-            scales: {
-              x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a', stepSize: (xMax - xMin) <= 20 ? 1 : undefined }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'k', color: '#7a5a3a' } },
-              y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'ℙ(X=k)', color: '#7a5a3a' } },
+
+        if (needsRebuild) {
+          if (rvChart) { rvChart.destroy(); rvChart = null; }
+          const stripes = createStripePattern('#f0d8a8');
+          rvChart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: ks, datasets: [{ type: 'bar', label: 'PMF', data: vals, backgroundColor: stripes, borderColor: '#f0d8a8', borderWidth: 1, barPercentage: 0.6, categoryPercentage: 0.6, borderRadius: 1 }] },
+            options: {
+              animation: { duration: 250, easing: 'easeOutQuart' as const },
+              responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
+              plugins: { legend: { display: false }, tooltip: { enabled: false } },
+              scales: {
+                x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a', stepSize: (xMax - xMin) <= 20 ? 1 : undefined }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'k', color: '#7a5a3a' } },
+                y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'ℙ(X=k)', color: '#7a5a3a' } },
+              },
             },
-          },
-        });
+          });
+        } else {
+          rvChart!.data.labels = ks;
+          rvChart!.data.datasets[0].data = vals;
+          (rvChart!.options.scales!.x as any).min = xMin;
+          (rvChart!.options.scales!.x as any).max = xMax;
+          (rvChart!.options.scales!.x as any).ticks.stepSize = (xMax - xMin) <= 20 ? 1 : undefined;
+          rvChart!.update();
+        }
       } else if (d.type === 'continuous' && d.pdf) {
         const data: { x: number; y: number }[] = [];
         const step = (xMax - xMin) / 300;
         for (let x = xMin; x <= xMax; x += step) {
           data.push({ x, y: d.pdf(x, paramVals) });
         }
-        datasets.push({
-          label: 'PDF',
-          data,
-          borderColor: '#90b878',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: true,
-          backgroundColor: makeScriptableGrad('#90b878', 0.3, 0.01),
-          tension: 0.3,
-        });
-        if (rvChart) { rvChart.destroy(); rvChart = null; }
-        rvChart = new Chart(canvas, {
-          type: 'line',
-          data: { datasets },
-          options: {
-            animation: { duration: 300, easing: 'easeOutQuart' as const },
-            responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
-            plugins: { legend: { display: false }, tooltip: { enabled: false } },
-            scales: {
-              x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'x', color: '#7a5a3a' } },
-              y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'f(x)', color: '#7a5a3a' } },
+
+        if (needsRebuild) {
+          if (rvChart) { rvChart.destroy(); rvChart = null; }
+          rvChart = new Chart(canvas, {
+            type: 'line',
+            data: { datasets: [{ label: 'PDF', data, borderColor: '#90b878', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: makeScriptableGrad('#90b878', 0.3, 0.01), tension: 0.3 }] },
+            options: {
+              animation: { duration: 250, easing: 'easeOutQuart' as const },
+              responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
+              plugins: { legend: { display: false }, tooltip: { enabled: false } },
+              scales: {
+                x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'x', color: '#7a5a3a' } },
+                y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'f(x)', color: '#7a5a3a' } },
+              },
             },
-          },
-        });
+          });
+        } else {
+          rvChart!.data.datasets[0].data = data;
+          (rvChart!.options.scales!.x as any).min = xMin;
+          (rvChart!.options.scales!.x as any).max = xMax;
+          rvChart!.update();
+        }
       }
     }
 
