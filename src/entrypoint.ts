@@ -1350,7 +1350,7 @@ export default (Alpine: Alpine) => {
 
     function project(x: number, y: number, z: number, W: number, H: number): [number, number] {
       // Isometric-ish projection
-      const scale = Math.min(W, H) * 0.11;
+      const scale = Math.min(W, H) * 0.15;
       const angle = 0.7;
       const tilt = 0.55;
       const px = W / 2 + (x - y) * Math.cos(angle) * scale;
@@ -1580,6 +1580,10 @@ export default (Alpine: Alpine) => {
 
       // Contours and annotations
       if (showContours) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(pad.left, pad.top, plotW, plotH);
+        ctx.clip();
         const levels = [0.8, 0.5, 0.2, 0.05];
         // Independent contours (axis-aligned) in teak
         if (rho !== 0) {
@@ -1588,6 +1592,7 @@ export default (Alpine: Alpine) => {
         // Actual contours in colonial (or sienna if bivariate)
         const contourColor = rho !== 0 ? 'rgba(240,120,88,0.5)' : 'rgba(240,216,168,0.45)';
         drawContours(ctx, sx, sy, rho, pad, plotW, plotH, contourColor, levels);
+        ctx.restore();
       }
 
       if (showAnnotations) {
