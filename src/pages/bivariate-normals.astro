@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TabNav from '../components/TabNav.astro';
+import Switch from '../components/Switch.astro';
 import { loadGlobal, loadPage } from '../lib/content';
 
 const global = loadGlobal();
@@ -35,7 +36,8 @@ const jsonLD = {
       <p class="subtitle">{c.subtitle}</p>
 
       <div class="card">
-        <div class="card-controls" x-on:change="render()">
+        <div class="card-header" x-on:change="render()">
+          <p class="card-label"><span class="label-upper">Joint PDF</span> f(x, y)</p>
           <TabNav
             modelField="mode"
             options={[
@@ -44,8 +46,6 @@ const jsonLD = {
             ]}
           />
         </div>
-
-        <p class="card-label">3D surface f(x, y)</p>
         <canvas id="bn-surface" class="surface-canvas"></canvas>
 
         <div class="param-group" x-transition>
@@ -63,12 +63,14 @@ const jsonLD = {
           </div>
         </div>
 
-        <div class="param-group" x-show="mode === 'bivariate'" x-transition>
+        <div class="rho-wrap" x-bind:class="{ 'is-open': mode === 'bivariate' }">
+          <div class="rho-inner">
           <div class="slider-row">
             <span class="slider-val" x-text="'ρ = ' + parseFloat(rho).toFixed(2)"></span>
             <input type="range" min="-0.95" max="0.95" step="0.05"
                    x-model="rho"
                    x-on:input="render()" />
+          </div>
           </div>
         </div>
       </div>
@@ -83,16 +85,21 @@ const jsonLD = {
           <div class="heatmap-wrap">
             <canvas id="bn-heatmap" class="heatmap-canvas"></canvas>
           </div>
-          <div class="slice-wrap">
+          <div class="slice-col">
+            <div class="slice-controls">
+              <div class="overlay-toggles">
+                <span x-on:change="render()"><Switch modelField="showContours" label="contours" /></span>
+                <span x-on:change="render()"><Switch modelField="showAnnotations" label="labels" /></span>
+              </div>
+              <div class="slice-slider">
+                <span class="slider-val slice-label" x-text="'slice y = ' + parseFloat(sliceY).toFixed(1)"></span>
+                <input type="range" min="-3" max="3" step="0.1"
+                       x-model="sliceY"
+                       x-on:input="render()" />
+              </div>
+            </div>
             <canvas id="bn-slice"></canvas>
           </div>
-        </div>
-
-        <div class="slider-row">
-          <span class="slider-val" x-text="'slice y = ' + parseFloat(sliceY).toFixed(1)"></span>
-          <input type="range" min="-3" max="3" step="0.1"
-                 x-model="sliceY"
-                 x-on:input="render()" />
         </div>
       </div>
 
@@ -126,7 +133,7 @@ const jsonLD = {
     font-family: var(--font-sans);
     font-size: var(--text-xs);
     letter-spacing: var(--tracking-widest);
-    text-transform: uppercase;
+    text-transform: none;
     color: var(--potters-clay);
     margin-bottom: 0.5rem;
   }
@@ -155,10 +162,8 @@ const jsonLD = {
     margin-bottom: 1.25rem;
   }
 
-  .card-controls {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 0.75rem;
+  .label-upper {
+    text-transform: uppercase;
   }
 
   .card-header {
@@ -174,9 +179,46 @@ const jsonLD = {
     font-family: var(--font-sans);
     font-size: var(--text-xs);
     letter-spacing: 0.15em;
-    text-transform: uppercase;
+    text-transform: none;
     color: var(--potters-clay);
     margin-bottom: 0.5rem;
+  }
+
+  .slice-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .slice-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .overlay-toggles {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .slice-slider {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .slice-slider input[type=range] {
+    max-width: 8rem;
+  }
+
+  .slice-label {
+    font-size: var(--text-xs) !important;
+    font-weight: normal !important;
+    min-width: 6rem;
   }
 
   .cond-info {
@@ -188,7 +230,7 @@ const jsonLD = {
   .surface-canvas {
     display: block;
     width: 100%;
-    height: 22rem;
+    height: 18rem;
     margin-bottom: 0.5rem;
   }
 
@@ -199,17 +241,34 @@ const jsonLD = {
     margin-top: 0.5rem;
   }
 
+  .rho-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows var(--transition-base), opacity var(--transition-base);
+    overflow: hidden;
+  }
+
+  .rho-wrap.is-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  .rho-inner {
+    overflow: hidden;
+  }
+
   .split-view {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    align-items: start;
+    align-items: end;
   }
 
   .heatmap-canvas {
     display: block;
     width: 100%;
-    height: 18rem;
+    height: 24rem;
   }
 
   .slice-wrap canvas {

@@ -1433,7 +1433,115 @@ export default (Alpine: Alpine) => {
       ctx.fillText('Y', lx2, ly2);
     }
 
-    function drawHeatmap(sx: number, sy: number, rho: number, sliceY: number) {
+    function drawContours(ctx: CanvasRenderingContext2D, sx: number, sy: number, rho: number,
+        pad: { left: number; right: number; top: number; bottom: number },
+        plotW: number, plotH: number, color: string, levels: number[]) {
+      // Draw elliptical contours of bivariate normal
+      // The contour at level c satisfies: (1/(1-ρ²))[(x/σx)² - 2ρ(x/σx)(y/σy) + (y/σy)²] = -2ln(2πσxσy√(1-ρ²)·c)
+      // Which is an ellipse parameterized by angle θ
+
+      const toPixelX = (x: number) => pad.left + ((x + RANGE) / (RANGE * 2)) * plotW;
+      const toPixelY = (y: number) => pad.top + ((RANGE - y) / (RANGE * 2)) * plotH;
+
+      for (const level of levels) {
+        const peak = jointPdf(0, 0, sx, sy, rho);
+        const fraction = level;
+        const target = peak * fraction;
+        if (target <= 0) continue;
+
+        // Mahalanobis radius for this contour
+        const normConst = 1 / (2 * Math.PI * sx * sy * Math.sqrt(1 - rho * rho));
+        if (target >= normConst) continue;
+        const r2 = -2 * (1 - rho * rho) * Math.log(target / normConst);
+        if (r2 <= 0) continue;
+        const r = Math.sqrt(r2);
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let t = 0; t <= 2 * Math.PI + 0.05; t += 0.05) {
+          const u = r * Math.cos(t);
+          const v = r * Math.sin(t);
+          // Transform from unit circle to ellipse with correlation
+          const x = sx * u;
+          const y = sy * (rho * u + Math.sqrt(1 - rho * rho) * v);
+          const px = toPixelX(x);
+          const py = toPixelY(y);
+          if (t === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+    }
+
+    function drawAnnotations(ctx: CanvasRenderingContext2D, sx: number, sy: number,
+        pad: { left: number; right: number; top: number; bottom: number },
+        plotW: number, plotH: number) {
+      const toPixelX = (x: number) => pad.left + ((x + RANGE) / (RANGE * 2)) * plotW;
+      const toPixelY = (y: number) => pad.top + ((RANGE - y) / (RANGE * 2)) * plotH;
+      const cx = toPixelX(0);
+      const cy = toPixelY(0);
+
+      // Center dot
+      ctx.fillStyle = '#1a0c06';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // σx — offset below center to avoid slice line
+      const sxPx = toPixelX(sx);
+      ctx.strokeStyle = '#3a1a0a';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + 12);
+      ctx.lineTo(sxPx, cy + 12);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#3a1a0a';
+      ctx.strokeStyle = 'rgba(240,216,168,0.3)';
+      ctx.lineWidth = 3;
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.strokeText('σₓ', (cx + sxPx) / 2, cy + 32);
+      ctx.fillText('σₓ', (cx + sxPx) / 2, cy + 32);
+
+      // σy — offset left of center
+      const syPy = toPixelY(sy);
+      ctx.strokeStyle = '#3a1a0a';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cx - 12, cy);
+      ctx.lineTo(cx - 12, syPy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#3a1a0a';
+      ctx.strokeStyle = 'rgba(240,216,168,0.3)';
+      ctx.lineWidth = 3;
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.strokeText('σᵧ', cx - 30, (cy + syPy) / 2 + 5);
+      ctx.fillText('σᵧ', cx - 30, (cy + syPy) / 2 + 5);
+
+      // Center dot + label — offset up-right
+      ctx.fillStyle = '#3a1a0a';
+      ctx.strokeStyle = 'rgba(240,216,168,0.3)';
+      ctx.lineWidth = 3;
+      ctx.font = '14px ui-monospace, monospace';
+      ctx.textAlign = 'left';
+      ctx.strokeText('(μₓ, μᵧ)', cx + 14, cy - 16);
+      ctx.fillText('(μₓ, μᵧ)', cx + 14, cy - 16);
+
+      // Axis labels — tucked inside plot
+      ctx.fillStyle = '#7a5a3a';
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('x', pad.left + plotW - 4, toPixelY(0) - 8);
+      ctx.textAlign = 'left';
+      ctx.fillText('y', toPixelX(0) + 6, pad.top + 16);
+    }
+
+    function drawHeatmap(sx: number, sy: number, rho: number, sliceY: number, showContours: boolean, showAnnotations: boolean) {
       if (!heatCtx || !heatCanvas) return;
       const W = heatCanvas.getBoundingClientRect().width;
       const H = heatCanvas.getBoundingClientRect().height;
@@ -1470,8 +1578,38 @@ export default (Alpine: Alpine) => {
         }
       }
 
+      // Contours and annotations
+      if (showContours) {
+        const levels = [0.8, 0.5, 0.2, 0.05];
+        // Independent contours (axis-aligned) in teak
+        if (rho !== 0) {
+          drawContours(ctx, sx, sy, 0, pad, plotW, plotH, 'rgba(184,148,112,0.25)', levels);
+        }
+        // Actual contours in colonial (or sienna if bivariate)
+        const contourColor = rho !== 0 ? 'rgba(240,120,88,0.5)' : 'rgba(240,216,168,0.45)';
+        drawContours(ctx, sx, sy, rho, pad, plotW, plotH, contourColor, levels);
+      }
+
+      if (showAnnotations) {
+        drawAnnotations(ctx, sx, sy, pad, plotW, plotH);
+      }
+
+      // Cross-section intensity strip along the slice
+      const slicePixelY = pad.top + ((RANGE - sliceY) / (RANGE * 2)) * plotH;
+      const stripH = 3;
+      for (let i = 0; i <= 100; i++) {
+        const x = -RANGE + i * step;
+        const v = jointPdf(x, sliceY, sx, sy, rho);
+        const t = Math.min(v / maxV, 1);
+        if (t > 0.01) {
+          const px = pad.left + i * cellW;
+          ctx.fillStyle = `rgba(240,120,88,${0.3 + t * 0.7})`;
+          ctx.fillRect(px, slicePixelY - stripH, cellW + 0.5, stripH * 2);
+        }
+      }
+
       // Slice line
-      const slicePixel = pad.top + ((RANGE - sliceY) / (RANGE * 2)) * plotH;
+      const slicePixel = slicePixelY;
       ctx.strokeStyle = '#f07858';
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 4]);
@@ -1533,7 +1671,7 @@ export default (Alpine: Alpine) => {
             }],
           },
           options: {
-            animation: false, responsive: true, maintainAspectRatio: true, aspectRatio: 3,
+            animation: false, responsive: true, maintainAspectRatio: true, aspectRatio: 1.8,
             plugins: {
               legend: { display: true, labels: { color: '#b89470', font: { size: 11 }, boxWidth: 18, boxHeight: 0 } },
               tooltip: { enabled: false },
@@ -1548,6 +1686,7 @@ export default (Alpine: Alpine) => {
               },
               y: {
                 min: 0,
+                suggestedMax: 0.6,
                 ticks: { color: '#7a5a3a' },
                 grid: { color: '#2e1508' },
                 border: { color: '#3a1a0a' },
@@ -1569,6 +1708,10 @@ export default (Alpine: Alpine) => {
       rho: '0',
       sliceY: '0',
       condInfo: '',
+      showContours: true,
+      showAnnotations: false,
+      _animFrame: null as number | null,
+      _current: { sx: 1, sy: 1, rho: 0, sliceY: 0 },
 
       init() {
         const self = this;
@@ -1590,25 +1733,72 @@ export default (Alpine: Alpine) => {
           });
           surfaceCtx = surfaceCanvas.getContext('2d');
           heatCtx = heatCanvas?.getContext('2d') || null;
+          self._current = { sx: 1, sy: 1, rho: 0, sliceY: 0 };
           self.render();
         };
         requestAnimationFrame(tryInit);
       },
 
       render() {
-        let sx = parseFloat(this.sigmaX) || 1;
-        let sy = parseFloat(this.sigmaY) || 1;
-        let rho = parseFloat(this.rho) || 0;
-        const sliceYVal = parseFloat(this.sliceY) || 0;
+        let targetSx = parseFloat(this.sigmaX) || 1;
+        let targetSy = parseFloat(this.sigmaY) || 1;
+        let targetRho = parseFloat(this.rho) || 0;
+        const targetSliceY = parseFloat(this.sliceY) || 0;
 
-        if (this.mode === 'general') { rho = 0; }
+        if (this.mode === 'general') { targetRho = 0; }
+
+        const cur = this._current;
+        const needsAnim = Math.abs(cur.sx - targetSx) > 0.01 ||
+                          Math.abs(cur.sy - targetSy) > 0.01 ||
+                          Math.abs(cur.rho - targetRho) > 0.01 ||
+                          Math.abs(cur.sliceY - targetSliceY) > 0.01;
+
+        if (this._animFrame) { cancelAnimationFrame(this._animFrame); this._animFrame = null; }
+
+        if (!needsAnim) {
+          cur.sx = targetSx; cur.sy = targetSy; cur.rho = targetRho; cur.sliceY = targetSliceY;
+          this._drawFrame();
+          return;
+        }
+
+        const self = this;
+        const SPEED = 0.15;
+        const step = () => {
+          cur.sx += (targetSx - cur.sx) * SPEED;
+          cur.sy += (targetSy - cur.sy) * SPEED;
+          cur.rho += (targetRho - cur.rho) * SPEED;
+          cur.sliceY += (targetSliceY - cur.sliceY) * SPEED;
+
+          const done = Math.abs(cur.sx - targetSx) < 0.005 &&
+                       Math.abs(cur.sy - targetSy) < 0.005 &&
+                       Math.abs(cur.rho - targetRho) < 0.005 &&
+                       Math.abs(cur.sliceY - targetSliceY) < 0.005;
+
+          if (done) {
+            cur.sx = targetSx; cur.sy = targetSy; cur.rho = targetRho; cur.sliceY = targetSliceY;
+          }
+
+          self._drawFrame();
+
+          if (!done) {
+            self._animFrame = requestAnimationFrame(step);
+          } else {
+            self._animFrame = null;
+          }
+        };
+        this._animFrame = requestAnimationFrame(step);
+      },
+
+      _drawFrame() {
+        const { sx, sy, rho, sliceY: sliceYVal } = this._current;
 
         const condMu = rho * (sx / sy) * sliceYVal;
         const condSigma = sx * Math.sqrt(1 - rho * rho);
-        this.condInfo = `f(x|Y=${sliceYVal.toFixed(1)}) ~ N(${condMu.toFixed(2)}, ${condSigma.toFixed(2)}²)`;
+        const indepNote = Math.abs(rho) < 0.01 ? '  (independent: slice = marginal)' : '';
+        this.condInfo = `f(x|Y=${sliceYVal.toFixed(1)}) ~ N(${condMu.toFixed(2)}, ${condSigma.toFixed(2)}²)${indepNote}`;
 
         drawSurface(sx, sy, rho);
-        drawHeatmap(sx, sy, rho, sliceYVal);
+        drawHeatmap(sx, sy, rho, sliceYVal, this.showContours, this.showAnnotations);
         drawSlice(sx, sy, rho, sliceYVal);
       },
     };
