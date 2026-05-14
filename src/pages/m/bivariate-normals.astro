@@ -1,8 +1,8 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import TabNav from '../components/TabNav.astro';
-import Switch from '../components/Switch.astro';
-import { loadGlobal, loadPage } from '../lib/content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TabNav from '../../components/TabNav.astro';
+import Switch from '../../components/Switch.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
 
 const global = loadGlobal();
 const { meta, content } = loadPage('bivariate-normals');
@@ -17,7 +17,7 @@ const jsonLD = {
   '@type': 'WebPage',
   name: c.heading,
   description: meta.description,
-  url: global.url + '/bivariate-normals',
+  url: global.url + '/m/bivariate-normals',
 };
 ---
 

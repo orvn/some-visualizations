@@ -1,7 +1,7 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import TabNav from '../components/TabNav.astro';
-import { loadGlobal, loadPage } from '../lib/content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TabNav from '../../components/TabNav.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
 
 const global = loadGlobal();
 const { meta, content } = loadPage('random-incidence');
@@ -16,7 +16,7 @@ const jsonLD = {
   '@type': 'WebPage',
   name: c.heading,
   description: meta.description,
-  url: global.url + '/random-incidence',
+  url: global.url + '/m/random-incidence',
 };
 ---
 

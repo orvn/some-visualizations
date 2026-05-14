@@ -1,6 +1,6 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import { loadGlobal, loadPage } from '../lib/content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
 
 const global = loadGlobal();
 const { meta, content } = loadPage('confidence');
@@ -15,7 +15,7 @@ const jsonLD = {
   '@type': 'WebPage',
   name: c.heading,
   description: meta.description,
-  url: global.url + '/confidence',
+  url: global.url + '/m/confidence',
 };
 ---
 
