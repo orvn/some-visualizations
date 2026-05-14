@@ -51,7 +51,7 @@ const jsonLD = {
                    x-on:change="simulate()" />
           </div>
           <div class="slider-row">
-            <span class="slider-val" x-text="(parseFloat(confidence) * 100).toFixed(0) + '%'"></span>
+            <span class="slider-val" x-text="'1−α = ' + (parseFloat(confidence) * 100).toFixed(0) + '%'"></span>
             <input type="range" min="0.5" max="0.99" step="0.01"
                    x-model="confidence"
                    x-on:change="simulate()" />

@@ -1935,14 +1935,16 @@ export default (Alpine: Alpine) => {
       ctx.fillStyle = '#7a5a3a';
       ctx.font = '10px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      const step = Math.max(1, Math.ceil((xMax - xMin) / 10));
-      for (let v = Math.ceil(xMin); v <= xMax; v += step) {
+      const range = xMax - xMin;
+      const step = range <= 3 ? 0.5 : range <= 6 ? 1 : Math.ceil(range / 10);
+      const startV = Math.ceil(xMin / step) * step;
+      for (let v = startV; v <= xMax; v += step) {
         const px = toX(v);
         ctx.beginPath();
         ctx.moveTo(px, axisY - 4);
         ctx.lineTo(px, axisY + 4);
         ctx.stroke();
-        ctx.fillText(String(v), px, axisY - 8);
+        ctx.fillText(step < 1 ? v.toFixed(1) : String(Math.round(v)), px, axisY - 8);
       }
 
       // θ dot at bottom
