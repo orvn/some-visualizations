@@ -1,0 +1,11 @@
+meta:
+  title: "Random Variables"
+  description: Interactive reference for 24 probability distributions. Adjust parameters and see PMFs, PDFs, expectations, and variances update in real time.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Random Variables"
+  eyebrow: Probability
+  subtitle: "Interactive reference for discrete and continuous distributions"

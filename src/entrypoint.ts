@@ -1809,6 +1809,356 @@ export default (Alpine: Alpine) => {
     };
   });
 
+  // Random Variables reference
+  Alpine.data('rvViz', () => {
+    let rvChart: Chart | null = null;
+
+    interface RVDef {
+      name: string;
+      type: 'discrete' | 'continuous';
+      params: { key: string; label: string; min: number; max: number; step: number; default: number }[];
+      pmf?: (k: number, p: Record<string, number>) => number;
+      pdf?: (x: number, p: Record<string, number>) => number;
+      range: (p: Record<string, number>) => [number, number];
+      mean: (p: Record<string, number>) => string;
+      variance: (p: Record<string, number>) => string;
+      formula: string;
+      description: string;
+    }
+
+    function fact(n: number): number { if (n <= 1) return 1; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
+    function logFact(n: number): number { let r = 0; for (let i = 2; i <= n; i++) r += Math.log(i); return r; }
+    function comb(n: number, k: number): number { if (k < 0 || k > n) return 0; return Math.exp(logFact(n) - logFact(k) - logFact(n - k)); }
+    function gamma(z: number): number {
+      if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
+      z -= 1;
+      const g = 7; const c = [0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+      let x = c[0]; for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+      const t = z + g + 0.5;
+      return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+    }
+    function normalPdfRV(x: number, mu: number, sigma: number): number {
+      return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
+    }
+
+    const dists: Record<string, RVDef> = {
+      // DISCRETE
+      bernoulli: { name: 'Bernoulli', type: 'discrete',
+        params: [{ key: 'p', label: 'p', min: 0.01, max: 0.99, step: 0.01, default: 0.5 }],
+        pmf: (k, p) => k === 0 ? 1 - p.p : k === 1 ? p.p : 0,
+        range: () => [-0.5, 1.5],
+        mean: (p) => `${p.p.toFixed(2)}`, variance: (p) => `${(p.p * (1 - p.p)).toFixed(4)}`,
+        formula: 'ℙ(X=k) = p^k (1−p)^(1−k), k ∈ {0,1}',
+        description: 'Single trial with success probability p. The building block of discrete probability.',
+      },
+      binomial: { name: 'Binomial', type: 'discrete',
+        params: [{ key: 'n', label: 'n', min: 1, max: 50, step: 1, default: 10 }, { key: 'p', label: 'p', min: 0.01, max: 0.99, step: 0.01, default: 0.5 }],
+        pmf: (k, p) => k < 0 || k > p.n || k !== Math.floor(k) ? 0 : comb(p.n, k) * Math.pow(p.p, k) * Math.pow(1 - p.p, p.n - k),
+        range: (p) => [-0.5, p.n + 0.5],
+        mean: (p) => `${(p.n * p.p).toFixed(2)}`, variance: (p) => `${(p.n * p.p * (1 - p.p)).toFixed(4)}`,
+        formula: 'ℙ(X=k) = C(n,k) p^k (1−p)^(n−k)',
+        description: 'Number of successes in n independent Bernoulli trials.',
+      },
+      geometric: { name: 'Geometric', type: 'discrete',
+        params: [{ key: 'p', label: 'p', min: 0.01, max: 0.99, step: 0.01, default: 0.3 }],
+        pmf: (k, p) => k < 1 || k !== Math.floor(k) ? 0 : Math.pow(1 - p.p, k - 1) * p.p,
+        range: () => [0.5, 20.5],
+        mean: (p) => `${(1 / p.p).toFixed(2)}`, variance: (p) => `${((1 - p.p) / (p.p * p.p)).toFixed(2)}`,
+        formula: 'ℙ(X=k) = (1−p)^(k−1) p, k = 1,2,3,…',
+        description: 'Number of trials until the first success. Memoryless: past failures don\'t affect future probability.',
+      },
+      pascal: { name: 'Pascal / Neg. Binomial', type: 'discrete',
+        params: [{ key: 'r', label: 'r', min: 1, max: 10, step: 1, default: 3 }, { key: 'p', label: 'p', min: 0.01, max: 0.99, step: 0.01, default: 0.4 }],
+        pmf: (k, p) => k < p.r || k !== Math.floor(k) ? 0 : comb(k - 1, p.r - 1) * Math.pow(p.p, p.r) * Math.pow(1 - p.p, k - p.r),
+        range: (p) => [p.r - 0.5, p.r + 25],
+        mean: (p) => `${(p.r / p.p).toFixed(2)}`, variance: (p) => `${(p.r * (1 - p.p) / (p.p * p.p)).toFixed(2)}`,
+        formula: 'ℙ(X=k) = C(k−1,r−1) p^r (1−p)^(k−r)',
+        description: 'Number of trials until the rth success. Generalizes the geometric distribution.',
+      },
+      poisson: { name: 'Poisson', type: 'discrete',
+        params: [{ key: 'lam', label: 'λ', min: 0.1, max: 20, step: 0.1, default: 4 }],
+        pmf: (k, p) => k < 0 || k !== Math.floor(k) ? 0 : Math.exp(-p.lam + k * Math.log(p.lam) - logFact(k)),
+        range: (p) => [-0.5, Math.max(15, p.lam * 3)],
+        mean: (p) => `${p.lam.toFixed(1)}`, variance: (p) => `${p.lam.toFixed(1)}`,
+        formula: 'ℙ(X=k) = (λ^k e^−λ) / k!',
+        description: 'Count of events in a fixed interval. Expectation equals variance. Approximates binomial for large n, small p.',
+      },
+      duniform: { name: 'Discrete Uniform', type: 'discrete',
+        params: [{ key: 'a', label: 'a', min: 0, max: 10, step: 1, default: 1 }, { key: 'b', label: 'b', min: 1, max: 20, step: 1, default: 6 }],
+        pmf: (k, p) => k < p.a || k > p.b || k !== Math.floor(k) ? 0 : 1 / (p.b - p.a + 1),
+        range: (p) => [p.a - 0.5, p.b + 0.5],
+        mean: (p) => `${((p.a + p.b) / 2).toFixed(1)}`, variance: (p) => `${Math.pow((((p.b - p.a + 1), 2) - 1) / 12).toFixed(2)}`,
+        formula: 'ℙ(X=k) = 1/(b−a+1), k = a,a+1,…,b',
+        description: 'Each integer in [a,b] is equally likely. A fair die is Uniform(1,6).',
+      },
+      hypergeometric: { name: 'Hypergeometric', type: 'discrete',
+        params: [{ key: 'N', label: 'N', min: 10, max: 60, step: 1, default: 30 }, { key: 'K', label: 'K', min: 1, max: 30, step: 1, default: 10 }, { key: 'n', label: 'n', min: 1, max: 30, step: 1, default: 8 }],
+        pmf: (k, p) => { const K = Math.min(p.K, p.N); const n = Math.min(p.n, p.N); if (k < Math.max(0, n + K - p.N) || k > Math.min(n, K) || k !== Math.floor(k)) return 0; return comb(K, k) * comb(p.N - K, n - k) / comb(p.N, n); },
+        range: (p) => [-0.5, Math.min(p.n, p.K) + 0.5],
+        mean: (p) => `${(p.n * p.K / p.N).toFixed(2)}`, variance: (p) => { const f = (p.N - p.n) / (p.N - 1); return `${(p.n * p.K / p.N * (1 - p.K / p.N) * f).toFixed(2)}`; },
+        formula: 'ℙ(X=k) = C(K,k)C(N−K,n−k) / C(N,n)',
+        description: 'Successes when drawing n items without replacement from N total, K of which are successes.',
+      },
+      categorical: { name: 'Categorical', type: 'discrete',
+        params: [{ key: 'k', label: 'outcomes', min: 2, max: 8, step: 1, default: 4 }],
+        pmf: (k, p) => k < 1 || k > p.k || k !== Math.floor(k) ? 0 : 1 / p.k,
+        range: (p) => [0.5, p.k + 0.5],
+        mean: (p) => `${((p.k + 1) / 2).toFixed(1)}`, variance: (p) => `${(((Math.pow(p.k, 2)) - 1) / 12).toFixed(2)}`,
+        formula: 'ℙ(X=k) = pₖ, shown here as uniform 1/k',
+        description: 'Generalized Bernoulli with k possible outcomes. Shown as uniform weights for simplicity.',
+      },
+      zipf: { name: 'Zipf', type: 'discrete',
+        params: [{ key: 's', label: 's', min: 0.5, max: 3, step: 0.1, default: 1 }, { key: 'N', label: 'N', min: 5, max: 30, step: 1, default: 15 }],
+        pmf: (k, p) => { if (k < 1 || k > p.N || k !== Math.floor(k)) return 0; let H = 0; for (let i = 1; i <= p.N; i++) H += 1 / Math.pow(i, p.s); return 1 / (Math.pow(k, p.s) * H); },
+        range: (p) => [0.5, p.N + 0.5],
+        mean: (p) => { let H = 0, Hm = 0; for (let i = 1; i <= p.N; i++) { H += 1 / Math.pow(i, p.s); Hm += i / Math.pow(i, p.s); } return `${(Hm / H).toFixed(2)}`; },
+        variance: (p) => '—',
+        formula: 'ℙ(X=k) = (1/k^s) / Σ(1/i^s)',
+        description: 'Power-law distribution. Models word frequencies, city populations, wealth. Heavy-tailed.',
+      },
+      // CONTINUOUS
+      uniform: { name: 'Uniform (cont.)', type: 'continuous',
+        params: [{ key: 'a', label: 'a', min: -5, max: 5, step: 0.5, default: 0 }, { key: 'b', label: 'b', min: -5, max: 10, step: 0.5, default: 1 }],
+        pdf: (x, p) => x >= p.a && x <= p.b ? 1 / (p.b - p.a) : 0,
+        range: (p) => [p.a - 1, p.b + 1],
+        mean: (p) => `${((p.a + p.b) / 2).toFixed(2)}`, variance: (p) => `${Math.pow((((p.b - p.a), 2)) / 12).toFixed(4)}`,
+        formula: 'f(x) = 1/(b−a), a ≤ x ≤ b',
+        description: 'Every value in [a,b] is equally likely. The simplest continuous distribution.',
+      },
+      exponential: { name: 'Exponential', type: 'continuous',
+        params: [{ key: 'lam', label: 'λ', min: 0.1, max: 5, step: 0.1, default: 1 }],
+        pdf: (x, p) => x < 0 ? 0 : p.lam * Math.exp(-p.lam * x),
+        range: (p) => [0, Math.max(5, 5 / p.lam)],
+        mean: (p) => `${(1 / p.lam).toFixed(2)}`, variance: (p) => `${(1 / (p.lam * p.lam)).toFixed(4)}`,
+        formula: 'f(x) = λe^(−λx), x ≥ 0',
+        description: 'Time until next event in a Poisson process. Memoryless: ℙ(X > s+t | X > s) = ℙ(X > t).',
+      },
+      normal: { name: 'Normal / Gaussian', type: 'continuous',
+        params: [{ key: 'mu', label: 'μ', min: -5, max: 5, step: 0.1, default: 0 }, { key: 'sigma', label: 'σ', min: 0.1, max: 4, step: 0.1, default: 1 }],
+        pdf: (x, p) => normalPdfRV(x, p.mu, p.sigma),
+        range: (p) => [p.mu - 4 * p.sigma, p.mu + 4 * p.sigma],
+        mean: (p) => `${p.mu.toFixed(2)}`, variance: (p) => `${(Math.pow(p.sigma, 2)).toFixed(4)}`,
+        formula: 'f(x) = (1/σ√2π) exp(−(x−μ)²/2σ²)',
+        description: 'The bell curve. Arises from the CLT as the limit of sums of i.i.d. random variables.',
+      },
+      erlang: { name: 'Erlang', type: 'continuous',
+        params: [{ key: 'k', label: 'k', min: 1, max: 15, step: 1, default: 3 }, { key: 'lam', label: 'λ', min: 0.1, max: 5, step: 0.1, default: 1 }],
+        pdf: (x, p) => x < 0 ? 0 : (Math.pow(p.lam, p.k) * Math.pow(x, p.k - 1) * Math.exp(-p.lam * x)) / fact(p.k - 1),
+        range: (p) => [0, Math.max(8, (p.k + 3 * Math.sqrt(p.k)) / p.lam)],
+        mean: (p) => `${(p.k / p.lam).toFixed(2)}`, variance: (p) => `${(p.k / (p.lam * p.lam)).toFixed(4)}`,
+        formula: 'f(x) = λ^k x^(k−1) e^(−λx) / (k−1)!',
+        description: 'Time of the kth arrival in a Poisson process. Sum of k independent exponentials.',
+      },
+      gammaD: { name: 'Gamma', type: 'continuous',
+        params: [{ key: 'alpha', label: 'α', min: 0.5, max: 10, step: 0.5, default: 2 }, { key: 'beta', label: 'β', min: 0.1, max: 5, step: 0.1, default: 1 }],
+        pdf: (x, p) => x <= 0 ? 0 : (Math.pow(p.beta, p.alpha) / gamma(p.alpha)) * Math.pow(x, p.alpha - 1) * Math.exp(-p.beta * x),
+        range: (p) => [0, Math.max(8, (p.alpha + 3 * Math.sqrt(p.alpha)) / p.beta)],
+        mean: (p) => `${(p.alpha / p.beta).toFixed(2)}`, variance: (p) => `${(p.alpha / (p.beta * p.beta)).toFixed(4)}`,
+        formula: 'f(x) = (β^α / Γ(α)) x^(α−1) e^(−βx)',
+        description: 'Generalizes the exponential (α=1) and Erlang (integer α). Flexible right-skewed shape.',
+      },
+      beta: { name: 'Beta', type: 'continuous',
+        params: [{ key: 'alpha', label: 'α', min: 0.1, max: 10, step: 0.1, default: 2 }, { key: 'beta', label: 'β', min: 0.1, max: 10, step: 0.1, default: 5 }],
+        pdf: (x, p) => { if (x <= 0 || x >= 1) return 0; const B = gamma(p.alpha) * gamma(p.beta) / gamma(p.alpha + p.beta); return Math.pow(x, p.alpha - 1) * Math.pow(1 - x, p.beta - 1) / B; },
+        range: () => [-0.05, 1.05],
+        mean: (p) => `${(p.alpha / (p.alpha + p.beta)).toFixed(4)}`, variance: (p) => `${Math.pow((p.alpha * p.beta / ((p.alpha + p.beta), 2) * (p.alpha + p.beta + 1))).toFixed(4)}`,
+        formula: 'f(x) = x^(α−1)(1−x)^(β−1) / B(α,β)',
+        description: 'Defined on [0,1]. Conjugate prior for Bernoulli/Binomial. Can be U-shaped, uniform, or bell-shaped.',
+      },
+      lognormal: { name: 'Log-Normal', type: 'continuous',
+        params: [{ key: 'mu', label: 'μ', min: -2, max: 2, step: 0.1, default: 0 }, { key: 'sigma', label: 'σ', min: 0.1, max: 2, step: 0.1, default: 0.5 }],
+        pdf: (x, p) => x <= 0 ? 0 : (1 / (x * p.sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-(Math.pow(Math.log(x) - p.mu, 2)) / (2 * Math.pow(p.sigma, 2))),
+        range: (p) => [0, Math.exp(p.mu + 3 * p.sigma)],
+        mean: (p) => `${Math.exp(p.mu + Math.pow(p.sigma, 2) / 2).toFixed(4)}`, variance: (p) => `${((Math.exp(Math.pow(p.sigma, 2)) - 1) * Math.exp(2 * p.mu + Math.pow(p.sigma, 2))).toFixed(4)}`,
+        formula: 'f(x) = (1/xσ√2π) exp(−(ln x−μ)²/2σ²)',
+        description: 'If ln(X) is normal, X is log-normal. Models stock prices, income, particle sizes.',
+      },
+      chisquared: { name: 'Chi-Squared', type: 'continuous',
+        params: [{ key: 'k', label: 'k (df)', min: 1, max: 20, step: 1, default: 3 }],
+        pdf: (x, p) => x <= 0 ? 0 : (1 / (Math.pow(2, p.k / 2) * gamma(p.k / 2))) * Math.pow(x, p.k / 2 - 1) * Math.exp(-x / 2),
+        range: (p) => [0, Math.max(10, p.k + 4 * Math.sqrt(2 * p.k))],
+        mean: (p) => `${p.k}`, variance: (p) => `${2 * p.k}`,
+        formula: 'f(x) = x^(k/2−1) e^(−x/2) / (2^(k/2) Γ(k/2))',
+        description: 'Sum of k squared standard normals. Used in hypothesis testing and goodness-of-fit.',
+      },
+      studentt: { name: 'Student\'s t', type: 'continuous',
+        params: [{ key: 'nu', label: 'ν (df)', min: 1, max: 30, step: 1, default: 5 }],
+        pdf: (x, p) => { const v = p.nu; return (gamma((v + 1) / 2) / (Math.sqrt(v * Math.PI) * gamma(v / 2))) * Math.pow(1 + x * x / v, -(v + 1) / 2); },
+        range: () => [-6, 6],
+        mean: (p) => p.nu > 1 ? '0' : 'undefined', variance: (p) => p.nu > 2 ? `${(p.nu / (p.nu - 2)).toFixed(4)}` : 'undefined',
+        formula: 'f(x) = Γ((ν+1)/2) / (√(νπ)Γ(ν/2)) (1+x²/ν)^(−(ν+1)/2)',
+        description: 'Heavier tails than the normal. Approaches N(0,1) as ν→∞. Used for small-sample confidence intervals.',
+      },
+      cauchy: { name: 'Cauchy', type: 'continuous',
+        params: [{ key: 'x0', label: 'x₀', min: -5, max: 5, step: 0.5, default: 0 }, { key: 'gam', label: 'γ', min: 0.1, max: 5, step: 0.1, default: 1 }],
+        pdf: (x, p) => 1 / (Math.PI * p.gam * (1 + Math.pow((x - p.x0) / p.gam, 2))),
+        range: (p) => [p.x0 - 10 * p.gam, p.x0 + 10 * p.gam],
+        mean: () => 'undefined', variance: () => 'undefined',
+        formula: 'f(x) = 1 / (πγ(1 + ((x−x₀)/γ)²))',
+        description: 'So heavy-tailed that the mean and variance don\'t exist. The ratio of two standard normals.',
+      },
+      weibull: { name: 'Weibull', type: 'continuous',
+        params: [{ key: 'k', label: 'k', min: 0.5, max: 5, step: 0.1, default: 1.5 }, { key: 'lam', label: 'λ', min: 0.5, max: 5, step: 0.1, default: 1 }],
+        pdf: (x, p) => x < 0 ? 0 : (p.k / p.lam) * Math.pow(x / p.lam, p.k - 1) * Math.exp(-Math.pow(x / p.lam, p.k)),
+        range: (p) => [0, p.lam * 3],
+        mean: (p) => `${(p.lam * gamma(1 + 1 / p.k)).toFixed(4)}`, variance: (p) => `${(Math.pow(p.lam, 2) * (gamma(1 + 2 / p.k) - gammaMath.pow((1 + 1 / p.k), 2))).toFixed(4)}`,
+        formula: 'f(x) = (k/λ)(x/λ)^(k−1) exp(−(x/λ)^k)',
+        description: 'Models time-to-failure. k<1: decreasing hazard, k=1: exponential, k>1: increasing hazard.',
+      },
+      pareto: { name: 'Pareto', type: 'continuous',
+        params: [{ key: 'alpha', label: 'α', min: 0.5, max: 5, step: 0.1, default: 2 }, { key: 'xm', label: 'xₘ', min: 0.5, max: 5, step: 0.5, default: 1 }],
+        pdf: (x, p) => x < p.xm ? 0 : p.alpha * Math.pow(p.xm, p.alpha) / Math.pow(x, p.alpha + 1),
+        range: (p) => [0, p.xm * 8],
+        mean: (p) => p.alpha > 1 ? `${(p.alpha * p.xm / (p.alpha - 1)).toFixed(4)}` : '∞',
+        variance: (p) => p.alpha > 2 ? `${(Math.pow(p.xm, 2) * p.alpha / Math.pow(((p.alpha - 1), 2) * (p.alpha - 2))).toFixed(4)}` : '∞',
+        formula: 'f(x) = αxₘ^α / x^(α+1), x ≥ xₘ',
+        description: 'Power-law tail. Models wealth (80/20 rule), file sizes, earthquake magnitudes.',
+      },
+      rayleigh: { name: 'Rayleigh', type: 'continuous',
+        params: [{ key: 'sigma', label: 'σ', min: 0.1, max: 5, step: 0.1, default: 1 }],
+        pdf: (x, p) => x < 0 ? 0 : (x / (Math.pow(p.sigma, 2))) * Math.exp(-Math.pow(x, 2) / (2 * Math.pow(p.sigma, 2))),
+        range: (p) => [0, p.sigma * 5],
+        mean: (p) => `${(p.sigma * Math.sqrt(Math.PI / 2)).toFixed(4)}`, variance: (p) => `${((2 - Math.PI / 2) * Math.pow(p.sigma, 2)).toFixed(4)}`,
+        formula: 'f(x) = (x/σ²) exp(−x²/2σ²)',
+        description: 'Distance from the origin of a 2D standard normal. Models wind speed, wave heights.',
+      },
+      laplace: { name: 'Laplace', type: 'continuous',
+        params: [{ key: 'mu', label: 'μ', min: -5, max: 5, step: 0.5, default: 0 }, { key: 'b', label: 'b', min: 0.1, max: 5, step: 0.1, default: 1 }],
+        pdf: (x, p) => (1 / (2 * p.b)) * Math.exp(-Math.abs(x - p.mu) / p.b),
+        range: (p) => [p.mu - 6 * p.b, p.mu + 6 * p.b],
+        mean: (p) => `${p.mu.toFixed(2)}`, variance: (p) => `${(2 * Math.pow(p.b, 2)).toFixed(4)}`,
+        formula: 'f(x) = (1/2b) exp(−|x−μ|/b)',
+        description: 'Double exponential. Sharper peak and heavier tails than the normal. Used in sparse signal models.',
+      },
+      logistic: { name: 'Logistic', type: 'continuous',
+        params: [{ key: 'mu', label: 'μ', min: -5, max: 5, step: 0.5, default: 0 }, { key: 's', label: 's', min: 0.1, max: 3, step: 0.1, default: 1 }],
+        pdf: (x, p) => { const e = Math.exp(-(x - p.mu) / p.s); return e / Math.pow((p.s * (1 + e), 2)); },
+        range: (p) => [p.mu - 8 * p.s, p.mu + 8 * p.s],
+        mean: (p) => `${p.mu.toFixed(2)}`, variance: (p) => `${((Math.pow(Math.PI, 2) * Math.pow(p.s, 2)) / 3).toFixed(4)}`,
+        formula: 'f(x) = e^(−(x−μ)/s) / (s(1+e^(−(x−μ)/s))²)',
+        description: 'Similar to normal but heavier tails. CDF is the logistic function used in classification.',
+      },
+    };
+
+    const discreteKeys = Object.keys(dists).filter(k => dists[k].type === 'discrete');
+    const continuousKeys = Object.keys(dists).filter(k => dists[k].type === 'continuous');
+
+    function renderChart(distKey: string, paramVals: Record<string, number>) {
+      const d = dists[distKey];
+      if (!d) return;
+
+      const canvas = document.getElementById('rv-chart') as HTMLCanvasElement | null;
+      if (!canvas) return;
+
+      const [xMin, xMax] = d.range(paramVals);
+      const datasets: any[] = [];
+
+      if (d.type === 'discrete' && d.pmf) {
+        const ks: number[] = [];
+        const vals: number[] = [];
+        for (let k = Math.ceil(xMin); k <= Math.floor(xMax); k++) {
+          ks.push(k);
+          vals.push(d.pmf(k, paramVals));
+        }
+        datasets.push({
+          type: 'bar',
+          label: 'PMF',
+          data: vals,
+          backgroundColor: '#f0d8a8',
+          borderColor: '#f0d8a8',
+          borderWidth: 1,
+          barPercentage: 0.6,
+          categoryPercentage: 0.6,
+        });
+        if (rvChart) { rvChart.destroy(); rvChart = null; }
+        rvChart = new Chart(canvas, {
+          type: 'bar',
+          data: { labels: ks, datasets },
+          options: {
+            animation: { duration: 300, easing: 'easeOutQuart' as const },
+            responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: {
+              x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a', stepSize: (xMax - xMin) <= 20 ? 1 : undefined }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'k', color: '#7a5a3a' } },
+              y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'ℙ(X=k)', color: '#7a5a3a' } },
+            },
+          },
+        });
+      } else if (d.type === 'continuous' && d.pdf) {
+        const data: { x: number; y: number }[] = [];
+        const step = (xMax - xMin) / 300;
+        for (let x = xMin; x <= xMax; x += step) {
+          data.push({ x, y: d.pdf(x, paramVals) });
+        }
+        datasets.push({
+          label: 'PDF',
+          data,
+          borderColor: '#90b878',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          backgroundColor: makeScriptableGrad('#90b878', 0.3, 0.01),
+          tension: 0.3,
+        });
+        if (rvChart) { rvChart.destroy(); rvChart = null; }
+        rvChart = new Chart(canvas, {
+          type: 'line',
+          data: { datasets },
+          options: {
+            animation: { duration: 300, easing: 'easeOutQuart' as const },
+            responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: {
+              x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'x', color: '#7a5a3a' } },
+              y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'f(x)', color: '#7a5a3a' } },
+            },
+          },
+        });
+      }
+    }
+
+    return {
+      group: 'discrete' as 'discrete' | 'continuous',
+      selected: 'bernoulli',
+      paramValues: {} as Record<string, number>,
+      currentDist: null as RVDef | null,
+      distMean: '',
+      distVar: '',
+
+      init() {
+        this.selectDist(this.selected);
+      },
+
+      selectDist(key: string) {
+        this.selected = key;
+        const d = dists[key];
+        if (!d) return;
+        this.currentDist = d;
+        this.group = d.type;
+        const pv: Record<string, number> = {};
+        d.params.forEach(p => { pv[p.key] = p.default; });
+        this.paramValues = pv;
+        this.updateChart();
+      },
+
+      updateChart() {
+        const d = dists[this.selected];
+        if (!d) return;
+        this.distMean = d.mean(this.paramValues);
+        this.distVar = d.variance(this.paramValues);
+        renderChart(this.selected, this.paramValues);
+      },
+
+      setParam(key: string, val: string) {
+        this.paramValues[key] = parseFloat(val);
+        this.updateChart();
+      },
+
+      get discreteList() { return discreteKeys.map(k => ({ key: k, name: dists[k].name })); },
+      get continuousList() { return continuousKeys.map(k => ({ key: k, name: dists[k].name })); },
+    };
+  });
+
   // Confidence intervals coverage
   Alpine.data('confidenceViz', () => {
     let ciCanvas: HTMLCanvasElement | null = null;

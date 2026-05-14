@@ -1,0 +1,328 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('rv');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/rv',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="rvViz">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="rv-layout">
+          <div class="rv-sidebar">
+            <p class="group-label" x-on:click="group = 'discrete'" x-bind:class="{ 'is-active': group === 'discrete' }">Discrete</p>
+            <ul class="rv-list">
+              <template x-for="d in discreteList" x-bind:key="d.key">
+                <li>
+                  <button class="rv-item" x-bind:class="{ 'is-selected': selected === d.key }" x-on:click="selectDist(d.key)" x-text="d.name"></button>
+                </li>
+              </template>
+            </ul>
+            <p class="group-label" x-on:click="group = 'continuous'" x-bind:class="{ 'is-active': group === 'continuous' }">Continuous</p>
+            <ul class="rv-list">
+              <template x-for="d in continuousList" x-bind:key="d.key">
+                <li>
+                  <button class="rv-item" x-bind:class="{ 'is-selected': selected === d.key }" x-on:click="selectDist(d.key)" x-text="d.name"></button>
+                </li>
+              </template>
+            </ul>
+          </div>
+
+          <div class="rv-main">
+            <div class="rv-header">
+              <h2 class="rv-name" x-text="currentDist?.name"></h2>
+              <span class="rv-type" x-text="currentDist?.type"></span>
+            </div>
+
+            <canvas id="rv-chart"></canvas>
+
+            <div class="rv-params">
+              <template x-for="p in currentDist?.params" x-bind:key="p.key">
+                <div class="slider-row">
+                  <span class="slider-val" x-text="p.label + ' = ' + (paramValues[p.key]?.toFixed?.(p.step < 1 ? 2 : 0) ?? p.default)"></span>
+                  <input type="range"
+                         x-bind:min="p.min" x-bind:max="p.max" x-bind:step="p.step"
+                         x-bind:value="paramValues[p.key] ?? p.default"
+                         x-on:input="setParam(p.key, $event.target.value)" />
+                </div>
+              </template>
+            </div>
+
+            <div class="rv-stats">
+              <span class="rv-stat">𝔼[X] = <em x-text="distMean"></em></span>
+              <span class="rv-stat">𝕍(X) = <em x-text="distVar"></em></span>
+            </div>
+
+            <div class="rv-info">
+              <p class="rv-formula" x-text="currentDist?.formula"></p>
+              <p class="rv-desc" x-text="currentDist?.description"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .viz-wrap {
+    padding-block: 2rem 4rem;
+  }
+
+  .viz-container {
+    max-width: 62rem;
+    margin-inline: auto;
+    padding-inline: var(--container-padding);
+  }
+
+  .eyebrow {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: var(--text-3xl);
+    font-weight: normal;
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: 0.5rem;
+    color: var(--parchment);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--teak);
+    font-size: var(--text-sm);
+    margin-bottom: 1.75rem;
+  }
+
+  .card {
+    background: var(--crow);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .rv-layout {
+    display: grid;
+    grid-template-columns: 12rem 1fr;
+    gap: 1.25rem;
+  }
+
+  .rv-sidebar {
+    border-right: 0.0625rem solid var(--bronze);
+    padding-right: 1.25rem;
+    max-height: 36rem;
+    overflow-y: auto;
+  }
+
+  .group-label {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    padding: 0.5rem 0 0.25rem;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+  }
+
+  .group-label.is-active {
+    color: var(--colonial);
+  }
+
+  .rv-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.75rem;
+  }
+
+  .rv-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.3125rem 0.5rem;
+    border: none;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: var(--teak);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+  }
+
+  .rv-item:hover {
+    background: var(--clinker);
+    color: var(--parchment);
+  }
+
+  .rv-item.is-selected {
+    background: var(--bronze);
+    color: var(--parchment);
+  }
+
+  .rv-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .rv-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .rv-name {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 400;
+    color: var(--parchment);
+  }
+
+  .rv-type {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--potters-clay);
+  }
+
+  canvas {
+    display: block;
+    width: 100% !important;
+  }
+
+  .rv-params {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .slider-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: bold;
+    color: var(--colonial);
+    min-width: 5rem;
+    white-space: nowrap;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    cursor: pointer;
+    height: 0.5rem;
+    background: transparent;
+    padding: 0.5rem 0;
+    margin: 0;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+  }
+
+  input[type=range]::-moz-range-track {
+    height: 0.5rem;
+    background: var(--bronze);
+    border-radius: 0.25rem;
+    border: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    margin-top: -0.375rem;
+    cursor: pointer;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 1.25rem;
+    height: 1.25rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  .rv-stats {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .rv-stat {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--teak);
+  }
+
+  .rv-stat em {
+    font-style: normal;
+    color: var(--colonial);
+  }
+
+  .rv-info {
+    border-top: 0.0625rem solid var(--bronze);
+    padding-top: 0.75rem;
+  }
+
+  .rv-formula {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  .rv-desc {
+    font-size: var(--text-sm);
+    color: var(--teak);
+    line-height: var(--leading-relaxed);
+  }
+</style>
