@@ -2053,6 +2053,20 @@ export default (Alpine: Alpine) => {
       const [xMin, xMax] = d.range(paramVals);
       const datasets: any[] = [];
 
+      // Compute extremity: how close params are to their edges (0=center, 1=edge)
+      let extremity = 0;
+      d.params.forEach(p => {
+        const val = paramVals[p.key] ?? p.default;
+        const mid = (p.min + p.max) / 2;
+        const halfRange = (p.max - p.min) / 2;
+        if (halfRange > 0) {
+          const t = Math.abs(val - mid) / halfRange; // 0 at center, 1 at edge
+          if (t > extremity) extremity = t;
+        }
+      });
+      // Threshold: only shift color past 0.4, ramp gently
+      const colorT = extremity < 0.4 ? 0 : Math.pow((extremity - 0.4) / 0.6, 2);
+
       const needsRebuild = !rvChart || (d.type === 'discrete' && (rvChart.config as any).type !== 'bar') || (d.type === 'continuous' && (rvChart.config as any).type !== 'line');
 
       if (d.type === 'discrete' && d.pmf) {
@@ -2080,8 +2094,15 @@ export default (Alpine: Alpine) => {
             },
           });
         } else {
+          // Interpolate discrete color: colonial(240,216,168) → sienna(240,120,88)
+          const dr = Math.round(240 + (240 - 240) * colorT);
+          const dg = Math.round(216 + (120 - 216) * colorT);
+          const db = Math.round(168 + (88 - 168) * colorT);
+          const dColor = `rgb(${dr},${dg},${db})`;
           rvChart!.data.labels = ks;
           rvChart!.data.datasets[0].data = vals;
+          (rvChart!.data.datasets[0] as any).borderColor = dColor;
+          (rvChart!.data.datasets[0] as any).backgroundColor = createStripePattern(dColor);
           (rvChart!.options.scales!.x as any).min = xMin;
           (rvChart!.options.scales!.x as any).max = xMax;
           (rvChart!.options.scales!.x as any).ticks.stepSize = (xMax - xMin) <= 20 ? 1 : undefined;
@@ -2110,7 +2131,14 @@ export default (Alpine: Alpine) => {
             },
           });
         } else {
+          // Interpolate continuous color: olivine(144,184,120) → sienna(240,120,88)
+          const cr = Math.round(144 + (240 - 144) * colorT);
+          const cg = Math.round(184 + (120 - 184) * colorT);
+          const cb = Math.round(120 + (88 - 120) * colorT);
+          const cHex = '#' + [cr, cg, cb].map(c => c.toString(16).padStart(2, '0')).join('');
           rvChart!.data.datasets[0].data = data;
+          (rvChart!.data.datasets[0] as any).borderColor = cHex;
+          (rvChart!.data.datasets[0] as any).backgroundColor = makeScriptableGrad(cHex, 0.3, 0.01);
           (rvChart!.options.scales!.x as any).min = xMin;
           (rvChart!.options.scales!.x as any).max = xMax;
           rvChart!.update();
