@@ -1814,7 +1814,6 @@ export default (Alpine: Alpine) => {
     let ciCanvas: HTMLCanvasElement | null = null;
     let ciCtx: CanvasRenderingContext2D | null = null;
 
-    const TRUE_MU = 0;
     const TRUE_SIGMA = 1;
     const NUM_EXPERIMENTS = 50;
 
@@ -1833,7 +1832,7 @@ export default (Alpine: Alpine) => {
       return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
     }
 
-    function runExperiments(n: number, confidence: number) {
+    function runExperiments(n: number, confidence: number, trueMu: number) {
       const alpha = 1 - confidence;
       const z = zQuantile(1 - alpha / 2);
       const experiments: { mean: number; lo: number; hi: number; captured: boolean }[] = [];
@@ -1841,20 +1840,20 @@ export default (Alpine: Alpine) => {
       for (let i = 0; i < NUM_EXPERIMENTS; i++) {
         let sum = 0;
         for (let j = 0; j < n; j++) {
-          sum += TRUE_MU + TRUE_SIGMA * boxMuller();
+          sum += trueMu + TRUE_SIGMA * boxMuller();
         }
         const mean = sum / n;
         const margin = z * TRUE_SIGMA / Math.sqrt(n);
         const lo = mean - margin;
         const hi = mean + margin;
-        experiments.push({ mean, lo, hi, captured: lo <= TRUE_MU && hi >= TRUE_MU });
+        experiments.push({ mean, lo, hi, captured: lo <= trueMu && hi >= trueMu });
       }
       return experiments;
     }
 
     let ciAnimId: number | null = null;
 
-    function drawCI(experiments: { mean: number; lo: number; hi: number; captured: boolean }[], showCount?: number) {
+    function drawCI(experiments: { mean: number; lo: number; hi: number; captured: boolean }[], trueMu: number, showCount?: number) {
       const count = showCount ?? experiments.length;
       if (!ciCtx || !ciCanvas) return;
       const W = ciCanvas.getBoundingClientRect().width;
@@ -1862,7 +1861,7 @@ export default (Alpine: Alpine) => {
       const ctx = ciCtx;
       ctx.clearRect(0, 0, W * 3, H * 3);
 
-      const pad = { left: 40, right: 20, top: 30, bottom: 25 };
+      const pad = { left: 40, right: 20, top: 28, bottom: 50 };
       const plotW = W - pad.left - pad.right;
       const plotH = H - pad.top - pad.bottom;
 
@@ -1884,7 +1883,7 @@ export default (Alpine: Alpine) => {
       const bracketH = 0;
 
       // True parameter vertical line
-      const trueX = toX(TRUE_MU);
+      const trueX = toX(trueMu);
       ctx.strokeStyle = 'rgba(240,216,168,0.25)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -1892,11 +1891,11 @@ export default (Alpine: Alpine) => {
       ctx.lineTo(trueX, pad.top + plotH);
       ctx.stroke();
 
-      // θ label at top
+      // θ label below axis
       ctx.fillStyle = '#f0d8a8';
-      ctx.font = '12px ui-monospace, monospace';
+      ctx.font = 'bold 16px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`θ = ${TRUE_MU}`, trueX, pad.top - 10);
+      ctx.fillText('θ', trueX, pad.top + plotH + 40);
 
       // Draw intervals as bracket-style lines
       for (let i = 0; i < count; i++) {
@@ -1923,21 +1922,16 @@ export default (Alpine: Alpine) => {
         ctx.fill();
       }
 
-      // θ dot on axis
-      ctx.fillStyle = '#f0d8a8';
-      ctx.beginPath();
-      ctx.arc(trueX, pad.top + plotH + 8, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Number line at bottom
+      // Number line at top
+      const axisY = pad.top - 2;
       ctx.strokeStyle = '#3a1a0a';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(pad.left, pad.top + plotH + 8);
-      ctx.lineTo(pad.left + plotW, pad.top + plotH + 8);
+      ctx.moveTo(pad.left, axisY);
+      ctx.lineTo(pad.left + plotW, axisY);
       ctx.stroke();
 
-      // Ticks
+      // Ticks at top
       ctx.fillStyle = '#7a5a3a';
       ctx.font = '10px system-ui, sans-serif';
       ctx.textAlign = 'center';
@@ -1945,15 +1939,23 @@ export default (Alpine: Alpine) => {
       for (let v = Math.ceil(xMin); v <= xMax; v += step) {
         const px = toX(v);
         ctx.beginPath();
-        ctx.moveTo(px, pad.top + plotH + 5);
-        ctx.lineTo(px, pad.top + plotH + 11);
+        ctx.moveTo(px, axisY - 4);
+        ctx.lineTo(px, axisY + 4);
         ctx.stroke();
-        ctx.fillText(String(v), px, pad.top + plotH + 22);
+        ctx.fillText(String(v), px, axisY - 8);
       }
+
+      // θ dot at bottom
+      const thetaY = pad.top + plotH + 10;
+      ctx.fillStyle = '#f0d8a8';
+      ctx.beginPath();
+      ctx.arc(trueX, thetaY, 3.5, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     return {
       n: '25',
+      theta: '0',
       confidence: '0.95',
       captured: 0,
       missed: 0,
@@ -1982,8 +1984,9 @@ export default (Alpine: Alpine) => {
         if (ciAnimId) { cancelAnimationFrame(ciAnimId); ciAnimId = null; }
 
         const n = parseInt(this.n) || 25;
+        const mu = parseFloat(this.theta) || 0;
         const conf = parseFloat(this.confidence) || 0.95;
-        const experiments = runExperiments(n, conf);
+        const experiments = runExperiments(n, conf, mu);
         this.captured = experiments.filter(e => e.captured).length;
         this.missed = NUM_EXPERIMENTS - this.captured;
         this.pct = ((this.captured / NUM_EXPERIMENTS) * 100).toFixed(0);
@@ -1993,7 +1996,7 @@ export default (Alpine: Alpine) => {
 
         const tick = () => {
           shown = Math.min(shown + perFrame, NUM_EXPERIMENTS);
-          drawCI(experiments, shown);
+          drawCI(experiments, mu, shown);
 
           if (shown < NUM_EXPERIMENTS) {
             ciAnimId = window.setTimeout(() => {
