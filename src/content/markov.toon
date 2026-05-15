@@ -1,0 +1,11 @@
+meta:
+  title: "Markov Chains"
+  description: Interactive state diagram with animated particle walks. Watch the steady-state distribution emerge from transition probabilities.
+  og_image: /og-default.png
+
+options: null
+
+content:
+  heading: "Markov Chains"
+  eyebrow: Probability
+  subtitle: "Transition probabilities, steady-state convergence, and the Markov property"

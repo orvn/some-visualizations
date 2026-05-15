@@ -1809,6 +1809,321 @@ export default (Alpine: Alpine) => {
     };
   });
 
+  // Markov Chains
+  Alpine.data('markovChain', () => {
+    let diagramCanvas: HTMLCanvasElement | null = null;
+    let diagramCtx: CanvasRenderingContext2D | null = null;
+    let histChart: Chart | null = null;
+    let walkTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const STATES = 4;
+    const STATE_LABELS = ['i', 'j', 'k', 'l'];
+    const COLORS = ['#f0d8a8', '#90b878', '#f07858', '#e8a050'];
+
+    // Default transition matrix (rows must sum to 1)
+    function defaultMatrix(): number[][] {
+      return [
+        [0.2, 0.5, 0.2, 0.1],
+        [0.3, 0.1, 0.4, 0.2],
+        [0.1, 0.3, 0.3, 0.3],
+        [0.4, 0.1, 0.1, 0.4],
+      ];
+    }
+
+    function statePositions(W: number, H: number): [number, number][] {
+      const cx = W / 2;
+      const cy = H / 2;
+      const r = Math.min(cx, cy) * 0.55;
+      return STATE_LABELS.map((_, i) => {
+        const angle = -Math.PI / 2 + (2 * Math.PI * i) / STATES;
+        return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+      });
+    }
+
+    function drawDiagram(matrix: number[][], current: number, visits: number[]) {
+      if (!diagramCtx || !diagramCanvas) return;
+      const W = diagramCanvas.getBoundingClientRect().width;
+      const H = diagramCanvas.getBoundingClientRect().height;
+      const ctx = diagramCtx;
+      ctx.clearRect(0, 0, W * 3, H * 3);
+
+      const pos = statePositions(W, H);
+      const nodeR = 22;
+
+      // Draw edges
+      for (let i = 0; i < STATES; i++) {
+        for (let j = 0; j < STATES; j++) {
+          if (i === j || matrix[i][j] < 0.01) continue;
+          const [x1, y1] = pos[i];
+          const [x2, y2] = pos[j];
+          const dx = x2 - x1;
+          const dy = y2 - y1;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          // Offset for bidirectional edges
+          const ox = -ny * 6;
+          const oy = nx * 6;
+
+          const sx = x1 + nx * nodeR + ox;
+          const sy = y1 + ny * nodeR + oy;
+          const ex = x2 - nx * (nodeR + 6) + ox;
+          const ey = y2 - ny * (nodeR + 6) + oy;
+
+          const alpha = Math.min(0.8, matrix[i][j] * 1.5);
+          ctx.strokeStyle = `rgba(184,148,112,${alpha})`;
+          ctx.lineWidth = Math.max(0.5, matrix[i][j] * 3);
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(ex, ey);
+          ctx.stroke();
+
+          // Arrowhead
+          const aLen = 6;
+          ctx.fillStyle = `rgba(184,148,112,${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(ex + nx * aLen, ey + ny * aLen);
+          ctx.lineTo(ex - ny * 3, ey + nx * 3);
+          ctx.lineTo(ex + ny * 3, ey - nx * 3);
+          ctx.closePath();
+          ctx.fill();
+
+          // Probability label
+          if (matrix[i][j] >= 0.05) {
+            const mx = (sx + ex) / 2 + ox * 0.8;
+            const my = (sy + ey) / 2 + oy * 0.8;
+            ctx.fillStyle = 'rgba(184,148,112,0.7)';
+            ctx.font = '9px ui-monospace, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(matrix[i][j].toFixed(2), mx, my);
+          }
+        }
+      }
+
+      // Self-loops
+      for (let i = 0; i < STATES; i++) {
+        if (matrix[i][i] < 0.01) continue;
+        const [x, y] = pos[i];
+        const angle = -Math.PI / 2 + (2 * Math.PI * i) / STATES;
+        const lx = x + Math.cos(angle) * (nodeR + 12);
+        const ly = y + Math.sin(angle) * (nodeR + 12);
+        ctx.strokeStyle = `rgba(184,148,112,${Math.min(0.6, matrix[i][i])})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(184,148,112,0.5)';
+        ctx.font = '8px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(matrix[i][i].toFixed(2), lx + Math.cos(angle) * 14, ly + Math.sin(angle) * 14);
+      }
+
+      // Draw nodes
+      for (let i = 0; i < STATES; i++) {
+        const [x, y] = pos[i];
+        const isActive = i === current;
+
+        ctx.fillStyle = isActive ? COLORS[i] : 'rgba(34,15,7,0.9)';
+        ctx.strokeStyle = COLORS[i];
+        ctx.lineWidth = isActive ? 2.5 : 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, nodeR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = isActive ? '#1a0c06' : COLORS[i];
+        ctx.font = 'bold 14px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(STATE_LABELS[i], x, y);
+      }
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    function updateHist(visits: number[], totalSteps: number) {
+      const canvas = document.getElementById('markov-hist') as HTMLCanvasElement | null;
+      if (!canvas) return;
+
+      const freq = visits.map(v => totalSteps > 0 ? v / totalSteps : 0);
+
+      if (!histChart) {
+        histChart = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: STATE_LABELS,
+            datasets: [{
+              label: 'Time in state',
+              data: freq,
+              backgroundColor: COLORS.map(c => c + '88'),
+              borderColor: COLORS,
+              borderWidth: 1,
+              barPercentage: 0.6,
+              categoryPercentage: 0.6,
+            }],
+          },
+          options: {
+            animation: { duration: 150 },
+            responsive: true, maintainAspectRatio: true, aspectRatio: 2.8,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: {
+              x: { ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' } },
+              y: { min: 0, max: 1, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'fraction of time', color: '#7a5a3a' } },
+            },
+          },
+        });
+      } else {
+        histChart.data.datasets[0].data = freq;
+        histChart.update();
+      }
+    }
+
+    function computeSteadyState(matrix: number[][]): number[] {
+      // Power iteration
+      let pi = new Array(STATES).fill(1 / STATES);
+      for (let iter = 0; iter < 200; iter++) {
+        const next = new Array(STATES).fill(0);
+        for (let j = 0; j < STATES; j++) {
+          for (let i = 0; i < STATES; i++) {
+            next[j] += pi[i] * matrix[i][j];
+          }
+        }
+        pi = next;
+      }
+      return pi;
+    }
+
+    return {
+      matrix: defaultMatrix(),
+      current: 0,
+      visits: new Array(STATES).fill(0) as number[],
+      totalSteps: 0,
+      running: false,
+      speed: '50',
+      steadyState: [] as number[],
+      stepsDisplay: '0',
+
+      init() {
+        const self = this;
+        const tryInit = () => {
+          diagramCanvas = document.getElementById('markov-diagram') as HTMLCanvasElement | null;
+          if (!diagramCanvas || diagramCanvas.getBoundingClientRect().width === 0) {
+            requestAnimationFrame(tryInit);
+            return;
+          }
+          const dpr = window.devicePixelRatio || 1;
+          const rect = diagramCanvas.getBoundingClientRect();
+          diagramCanvas.width = rect.width * dpr;
+          diagramCanvas.height = rect.height * dpr;
+          diagramCtx = diagramCanvas.getContext('2d');
+          if (diagramCtx) diagramCtx.scale(dpr, dpr);
+          self.recalc();
+          self.draw();
+        };
+        requestAnimationFrame(tryInit);
+      },
+
+      recalc() {
+        this.steadyState = computeSteadyState(this.matrix);
+      },
+
+      draw() {
+        drawDiagram(this.matrix, this.current, this.visits);
+        updateHist(this.visits, this.totalSteps);
+      },
+
+      reset() {
+        this.stop();
+        this.current = 0;
+        this.visits = new Array(STATES).fill(0);
+        this.totalSteps = 0;
+        this.stepsDisplay = '0';
+        this.draw();
+      },
+
+      step() {
+        const row = this.matrix[this.current];
+        let r = Math.random();
+        let next = 0;
+        for (let j = 0; j < STATES; j++) {
+          r -= row[j];
+          if (r <= 0) { next = j; break; }
+        }
+        this.current = next;
+        const v = [...this.visits];
+        v[next]++;
+        this.visits = v;
+        this.totalSteps++;
+        this.stepsDisplay = String(this.totalSteps);
+        drawDiagram(this.matrix, this.current, this.visits);
+        updateHist(this.visits, this.totalSteps);
+      },
+
+      start() {
+        if (this.running) return;
+        this.running = true;
+        const self = this;
+        const doStep = () => {
+          if (!self.running) return;
+          // Inline the step logic to avoid proxy issues
+          const row = self.matrix[self.current];
+          let r = Math.random();
+          let next = 0;
+          for (let j = 0; j < STATES; j++) {
+            r -= row[j];
+            if (r <= 0) { next = j; break; }
+          }
+          self.current = next;
+          const v = [...self.visits];
+          v[next]++;
+          self.visits = v;
+          self.totalSteps++;
+          self.stepsDisplay = String(self.totalSteps);
+          drawDiagram(self.matrix, self.current, self.visits);
+          updateHist(self.visits, self.totalSteps);
+
+          const ms = Math.max(5, 200 - parseInt(self.speed) * 2);
+          walkTimer = setTimeout(doStep, ms);
+        };
+        doStep();
+      },
+
+      stop() {
+        this.running = false;
+        if (walkTimer) { clearTimeout(walkTimer); walkTimer = null; }
+      },
+
+      setTransition(i: number, j: number, val: string) {
+        const v = parseFloat(val) || 0;
+        const old = this.matrix[i][j];
+        const diff = v - old;
+        this.matrix[i][j] = v;
+
+        // Redistribute diff across other entries in row i
+        const others = [];
+        for (let k = 0; k < STATES; k++) {
+          if (k !== j && this.matrix[i][k] > 0.01) others.push(k);
+        }
+        if (others.length > 0) {
+          const each = diff / others.length;
+          others.forEach(k => {
+            this.matrix[i][k] = Math.max(0, this.matrix[i][k] - each);
+          });
+        }
+
+        // Normalize
+        let sum = 0;
+        for (let k = 0; k < STATES; k++) sum += this.matrix[i][k];
+        if (sum > 0) {
+          for (let k = 0; k < STATES; k++) this.matrix[i][k] /= sum;
+        }
+
+        this.recalc();
+        this.draw();
+      },
+    };
+  });
+
   // Random Variables reference
   Alpine.data('rvViz', () => {
     let rvChart: Chart | null = null;
