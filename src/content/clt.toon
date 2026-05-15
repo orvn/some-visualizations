@@ -1,7 +1,7 @@
 meta:
   title: "Central Limit Theorem"
   description: Watch sums of random variables converge to a normal distribution as sample size grows, regardless of the source distribution.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 

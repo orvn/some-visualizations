@@ -1,7 +1,7 @@
 meta:
   title: "Covariance"
   description: Visualize how covariance and correlation describe the tendency of two variables to move together, using a bivariate normal with adjustable ρ.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 

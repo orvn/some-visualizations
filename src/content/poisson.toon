@@ -1,7 +1,7 @@
 meta:
   title: "Poisson Process"
   description: Interactive simulation of a Poisson process showing arrivals on a timeline with adjustable rate parameter λ.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 

@@ -1,7 +1,7 @@
 meta:
   title: "Bivariate Normals"
   description: 3D surface and contour views of joint normal distributions. Slice the surface to reveal conditional PDFs.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 

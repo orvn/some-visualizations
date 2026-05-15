@@ -1,7 +1,7 @@
 meta:
   title: "De Moivre-Laplace"
   description: The normal approximation to a binomial distribution. Watch the PMF converge to a bell curve as sample size grows.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 

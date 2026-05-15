@@ -3,4 +3,4 @@ tagline: Static site starter optimized for compatibility and performance.
 description: A collection of frontend interactive data.
 url: https://example.com
 title_postfix: " — Some Visualizations"
-og_image: /og-default.png
+og_image: /og-image.png

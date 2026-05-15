@@ -1,7 +1,7 @@
 meta:
   title: "Confidence Intervals"
   description: Run 100 experiments to see how confidence intervals capture the true parameter. The frequentist interpretation, visualized.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 
