@@ -3,8 +3,7 @@ import alpinejs from '@astrojs/alpinejs';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  // Set this to your production domain — required for sitemap + canonical URLs
-  site: 'https://foo.com',
+  site: 'https://somevisuals.com',
 
   output: 'static',
 
