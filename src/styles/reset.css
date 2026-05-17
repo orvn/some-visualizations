@@ -15,6 +15,7 @@
 html {
   hanging-punctuation: first last;
   color-scheme: light dark;
+  overflow-x: hidden;
 }
 
 body {
