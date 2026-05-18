@@ -121,6 +121,8 @@ const jsonLD = {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.875rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .card-label {
@@ -135,6 +137,39 @@ const jsonLD = {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 30em) {
+    .card-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .card-header .card-label {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .card-header :global(.btn-start) {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .bias-controls {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      display: contents;
+    }
+
+    .bias-controls .slider-row {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
   }
 
   .slider-row {
@@ -256,6 +291,29 @@ const jsonLD = {
     stroke: var(--olivine);
     stroke-width: 0.1875rem;
     opacity: 1;
+  }
+
+  @media (max-width: 30em) {
+    .bayes-chart :global(.axis text) {
+      font-size: 1rem;
+    }
+
+    .bayes-chart :global(.axis path),
+    .bayes-chart :global(.axis line) {
+      stroke-width: 0.125rem;
+    }
+
+    .bayes-chart :global(.trial) {
+      stroke-width: 0.25rem;
+    }
+
+    .bayes-chart :global(.trial.prev) {
+      stroke-width: 0.1875rem;
+    }
+
+    .bayes-chart :global(.trial.final) {
+      stroke-width: 0.3125rem;
+    }
   }
 
   .stat-line {
