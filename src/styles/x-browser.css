@@ -160,3 +160,33 @@ body {
 img[src$=".svg"] {
   height: auto;
 }
+
+/* ---------------------------------------------------------------------------
+   Range input: mobile-friendly touch targets
+--------------------------------------------------------------------------- */
+
+@media (pointer: coarse) {
+  input[type=range] {
+    padding: 1rem 0;
+    touch-action: manipulation;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    width: 2rem;
+    height: 2rem;
+    margin-top: -0.75rem;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 0.5rem;
+  }
+
+  input[type=range]::-moz-range-track {
+    height: 0.5rem;
+  }
+}
