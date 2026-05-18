@@ -3,6 +3,16 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Filler, 
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController);
 
+// On mobile, make charts taller by reducing aspect ratios
+Chart.register({
+  id: 'mobileAspect',
+  beforeInit(chart: any) {
+    if (window.innerWidth < 768 && chart.options.aspectRatio && chart.options.aspectRatio > 1.4) {
+      chart.options.aspectRatio = Math.max(1.2, chart.options.aspectRatio * 0.55);
+    }
+  },
+});
+
 const MEAN = 0;
 const X_VALS: number[] = [];
 for (let x = -6; x <= 6; x += 0.12) X_VALS.push(parseFloat(x.toFixed(2)));
