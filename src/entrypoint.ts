@@ -778,7 +778,7 @@ export default (Alpine: Alpine) => {
             animation: false,
             responsive: true,
             maintainAspectRatio: true,
-            aspectRatio: 2.4,
+            aspectRatio: window.innerWidth < 480 ? 0.75 : 2.4,
             plugins: {
               legend: {
                 display: true,
