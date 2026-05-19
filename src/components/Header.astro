@@ -21,6 +21,7 @@ const { name } = loadGlobal();
     background-color: var(--graphite);
     border-bottom: none;
     z-index: var(--z-header);
+    overflow-x: clip;
   }
 
   .header-inner {
@@ -63,7 +64,7 @@ const { name } = loadGlobal();
 
   .site-logo::after {
     left: 0;
-    right: -100vw;
+    width: 100vw;
     bottom: 0.5rem;
     height: 0.0625rem;
   }
