@@ -212,6 +212,8 @@ const visualizations = [
     .viz-grid {
       grid-template-columns: 1fr 1fr;
       gap: 0.5rem;
+      padding: 0;
+      margin: 0;
     }
 
     .viz-grid {
@@ -231,13 +233,13 @@ const visualizations = [
     }
 
     .viz-grid :global(.viz-title) {
-      font-size: var(--text-sm);
+      font-size: 1.1rem;
       line-height: 1.2;
     }
 
     .viz-grid :global(.viz-desc) {
-      font-size: var(--text-xs);
-      line-height: 1.35;
+      font-size: var(--text-sm);
+      line-height: 1.4;
     }
   }
 </style>
@@ -248,23 +250,39 @@ const visualizations = [
     var cards = document.querySelectorAll('.viz-card');
     if (!cards.length) return;
 
-    // Reset
+    // Reset all heights
     cards.forEach(function(c) {
       c.style.minHeight = '';
       var title = c.querySelector('.viz-title');
       if (title) title.style.minHeight = '';
     });
 
-    // Group by row
-    var rows = {};
-    cards.forEach(function(card) {
-      var top = Math.round(card.getBoundingClientRect().top);
-      if (!rows[top]) rows[top] = [];
-      rows[top].push(card);
+    // Force reflow so natural heights are recalculated
+    void document.body.offsetHeight;
+
+    // Group by row using a tolerance of 5px for sub-pixel differences
+    var rows = [];
+    var lastTop = -999;
+    var currentRow = [];
+    var sorted = Array.from(cards).sort(function(a, b) {
+      return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
     });
 
-    Object.keys(rows).forEach(function(key) {
-      var row = rows[key];
+    sorted.forEach(function(card) {
+      var top = card.getBoundingClientRect().top;
+      if (Math.abs(top - lastTop) > 5) {
+        if (currentRow.length) rows.push(currentRow);
+        currentRow = [];
+        lastTop = top;
+      }
+      currentRow.push(card);
+    });
+    if (currentRow.length) rows.push(currentRow);
+
+    rows.forEach(function(row) {
+      // Only equalize if more than one card in the row
+      if (row.length < 2) return;
+
       var maxCard = 0;
       var maxTitle = 0;
 
