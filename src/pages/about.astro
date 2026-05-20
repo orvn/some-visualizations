@@ -18,7 +18,9 @@ const c = content as {
     <div class="container">
       <h1>{c.heading}</h1>
       <div class="markdown">
-        {c.paragraphs.map((p) => <p>{p}</p>)}
+        <p>Hey! This site features a collection of interactive visualizations designed to make abstract ideas more concrete.</p>
+        <p>Concepts illustrated range from first principles in math and computer science, to visualization of real data to surface patterns that are hard to see through conventional text or tabular formats.</p>
+        <p>New content and categories are always being added. To report a bug or suggest a feature, <a href="https://github.com/orvn/some-visualizations/issues/new/choose" target="_blank" rel="noopener">open a Github issue</a>.</p>
       </div>
     </div>
   </section>
@@ -31,6 +33,10 @@ const c = content as {
 
   h1 {
     margin-bottom: 2rem;
+  }
+
+  .page-section .container {
+    padding-left: calc(var(--container-padding) + 1.5rem);
   }
 
   .markdown {
