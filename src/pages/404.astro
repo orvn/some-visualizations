@@ -12,14 +12,18 @@ const { meta, options } = loadPage('404');
 >
   <section class="error-page">
     <div class="error-top">
-      <p class="error-eyebrow">Page not found &middot; &alpha; = 0.05</p>
+      <p class="error-eyebrow">Page not found &middot; &alpha; = .05</p>
       <h1 class="error-heading">Outside the confidence interval.</h1>
       <p class="error-sub">With 95% confidence, this page does not exist.</p>
-      
+      <div class="error-actions">
+        <a href="/" class="error-btn">Go home</a>
+      </div>
+
       <div class="error-ci">
         <p class="ci-label">&mu; &middot; KNOWN PAGES</p>
         <div class="ci-bar">
           <div class="ci-range">
+            <div class="ci-axis"></div>
             <span class="ci-dot"></span>
           </div>
           <div class="ci-outlier">
@@ -29,17 +33,11 @@ const { meta, options } = loadPage('404');
           </div>
         </div>
         <div class="ci-labels">
-          <span>-1.96&sigma;</span>
-          <span>+1.96&sigma;</span>
+          <span>-1.96&sdot;&sigma;</span>
+          <span>+1.96&sdot;&sigma;</span>
         </div>
       </div>
-
     </div>
-
-    <div class="error-actions">
-      <a href="/" class="error-btn">Go home</a>
-    </div>
-
   </section>
 </BaseLayout>
 
@@ -55,7 +53,7 @@ const { meta, options } = loadPage('404');
   }
 
   .error-top {
-    margin-bottom: 3rem;
+    margin-bottom: 1rem;
   }
 
   .error-eyebrow {
@@ -74,6 +72,7 @@ const { meta, options } = loadPage('404');
     line-height: 0.9;
     color: var(--parchment);
     margin-bottom: 1.5rem;
+    max-width: 55rem;
   }
 
   .error-sub {
@@ -82,11 +81,13 @@ const { meta, options } = loadPage('404');
     line-height: var(--leading-relaxed);
     max-width: 48ch;
     margin-inline: auto;
+    margin-bottom: 2rem
   }
 
   .error-ci {
     width: 100%;
     max-width: 52rem;
+    margin-top: 5rem;
     margin-bottom: 3rem;
   }
 
@@ -94,26 +95,54 @@ const { meta, options } = loadPage('404');
     font-family: var(--font-mono);
     font-size: 0.625rem;
     letter-spacing: 0.15em;
-    color: var(--potters-clay);
+    color: var(--olivine);
     margin-bottom: 0.5rem;
+    margin-left: -1.5rem;
   }
 
   .ci-bar {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+  }
+
+  .ci-axis {
+    position: absolute;
+    left: -100vw;
+    right: -100vw;
+    top: 50%;
+    height: 0.0625rem;
+    background: var(--bronze);
+    transform: translateY(-50%);
+    z-index: 0;
+  }
+
+  .ci-range::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 0.0625rem;
+    background: var(--olivine);
+    transform: translateY(-50%);
+    z-index: 0;
   }
 
   .ci-range {
-    flex: 1;
+    flex: 0.70;
     height: 2.25rem;
     background: rgba(144, 184, 120, 0.15);
-    border: 0.0625rem solid var(--olivine);
-    border-radius: 0.25rem;
+    border-left: 0.0625rem solid var(--olivine);
+    border-right: 0.0625rem solid var(--olivine);
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
+    z-index: 1;
   }
 
   .ci-dot {
@@ -121,75 +150,86 @@ const { meta, options } = loadPage('404');
     height: 0.75rem;
     background: var(--olivine);
     border-radius: 50%;
-    opacity: 0.6;
+    opacity: 0.95;
   }
 
   .ci-outlier {
+    position: absolute;
+    right: 0;
+    z-index: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
-    flex-shrink: 0;
+    height: 2.25rem;
   }
 
   .ci-404 {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 0.25rem;
     font-family: var(--font-display);
     font-style: italic;
     font-size: var(--text-2xl);
     color: var(--sienna);
     line-height: 1;
+    white-space: nowrap;
   }
 
   .ci-dot-red {
-    width: 0.875rem;
-    height: 0.875rem;
+    width: 0.625rem;
+    height: 0.625rem;
     background: var(--sienna);
     border-radius: 50%;
     animation: pulse404 2s ease-in-out infinite;
   }
 
   .ci-you {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 0.25rem;
     font-family: var(--font-mono);
     font-size: 0.5625rem;
     letter-spacing: 0.15em;
     color: var(--sienna);
+    white-space: nowrap;
   }
 
   .ci-labels {
     display: flex;
     justify-content: space-between;
-    max-width: calc(100% - 5rem);
-    margin-top: 0.375rem;
+    width: 76%;
+    margin: 0.375rem auto 0;
     font-family: var(--font-mono);
     font-size: 0.625rem;
-    color: var(--potters-clay);
+    color: var(--olivine);
   }
 
-  .error-actions {
-    display: flex;
-    gap: 0.75rem;
-  }
 
   .error-btn {
-    padding: 0.625rem 1.5rem;
-    background: var(--parchment);
-    border: 0.0625rem solid var(--teak);
+    margin: 1rem auto 2rem;
+    padding: 0.375rem 1rem;
+    background: var(--bronze);
+    border: 0.0625rem solid var(--potters-clay);
     border-radius: 0.375rem;
-    color: var(--graphite);
+    color: var(--parchment);
     font-family: var(--font-sans);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     font-weight: 500;
+    letter-spacing: 0.05em;
     text-decoration: none;
     transition: background-color var(--transition-fast);
   }
 
   .error-btn:hover {
-    background: var(--colonial);
+    background: var(--potters-clay);
   }
 
   @keyframes pulse404 {
     0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(240, 120, 88, 0.4); }
-    50% { opacity: 0.7; box-shadow: 0 0 0 0.5rem rgba(240, 120, 88, 0); }
+    50% { opacity: 0.75; box-shadow: 0 0 0 1rem rgba(240, 120, 88, 0); }
   }
 
   @media (max-width: 30em) {
