@@ -11,41 +11,35 @@ const { meta, options } = loadPage('404');
   noindex={options?.noindex ?? false}
 >
   <section class="error-page">
-    <div class="container error-content">
-      <p class="error-eyebrow">ERR &middot; STATUS 404 &middot; Z-SCORE = &infin;</p>
-      <h1 class="error-heading">You have found an outlier.</h1>
-      <div class="error-actions">
-        <a href="/" class="error-btn error-btn-primary">&larr; Return to the mean</a>
+    <div class="error-top">
+      <p class="error-eyebrow">Page not found &middot; &alpha; = 0.05</p>
+      <h1 class="error-heading">Outside the confidence interval.</h1>
+      <p class="error-sub">With 95% confidence, this page does not exist.</p>
+      
+      <div class="error-ci">
+        <p class="ci-label">&mu; &middot; KNOWN PAGES</p>
+        <div class="ci-bar">
+          <div class="ci-range">
+            <span class="ci-dot"></span>
+          </div>
+          <div class="ci-outlier">
+            <span class="ci-404">404</span>
+            <span class="ci-dot-red"></span>
+            <span class="ci-you">YOU ARE HERE</span>
+          </div>
+        </div>
+        <div class="ci-labels">
+          <span>-1.96&sigma;</span>
+          <span>+1.96&sigma;</span>
+        </div>
       </div>
+
     </div>
 
-    <div class="error-viz">
-      <svg viewBox="0 0 1200 340" preserveAspectRatio="none" class="bell-svg" aria-hidden="true">
-        <defs>
-          <linearGradient id="bell-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#f07858" stop-opacity="0.7" />
-            <stop offset="100%" stop-color="#f07858" stop-opacity="0.15" />
-          </linearGradient>
-        </defs>
-        <path d="M 0,340 C 0,340 100,338 200,330 C 300,310 350,260 400,200 C 450,140 500,60 550,25 C 575,10 590,5 600,5 C 610,5 625,10 650,25 C 700,60 750,140 800,200 C 850,260 900,310 1000,330 C 1100,338 1200,340 1200,340 Z" fill="url(#bell-fill)" />
-        <path d="M 0,340 C 0,340 100,338 200,330 C 300,310 350,260 400,200 C 450,140 500,60 550,25 C 575,10 590,5 600,5 C 610,5 625,10 650,25 C 700,60 750,140 800,200 C 850,260 900,310 1000,330 C 1100,338 1200,340 1200,340" fill="none" stroke="#f07858" stroke-width="2" />
-        <line x1="0" y1="335" x2="1200" y2="335" stroke="#3a1a0a" stroke-width="1" />
-        <line x1="600" y1="5" x2="600" y2="335" stroke="#3a1a0a" stroke-width="1" stroke-dasharray="4 4" />
-        <text x="200" y="332" fill="#7a5a3a" font-size="14" text-anchor="middle" font-family="ui-monospace, monospace">-3&sigma;</text>
-        <text x="330" y="332" fill="#7a5a3a" font-size="14" text-anchor="middle" font-family="ui-monospace, monospace">-2&sigma;</text>
-        <text x="465" y="332" fill="#7a5a3a" font-size="14" text-anchor="middle" font-family="ui-monospace, monospace">-1&sigma;</text>
-        <text x="600" y="332" fill="#7a5a3a" font-size="14" text-anchor="middle" font-family="ui-monospace, monospace">&mu;</text>
-        <text x="735" y="332" fill="#7a5a3a" font-size="14" text-anchor="middle" font-family="ui-monospace, monospace">+1&sigma;</text>
-        <text x="870" y="332" fill="#7a5a3a" font-size="14" text-anchor="middle" font-family="ui-monospace, monospace">+2&sigma;</text>
-        <text x="1000" y="332" fill="#7a5a3a" font-size="14" text-anchor="middle" font-family="ui-monospace, monospace">+3&sigma;</text>
-        <g class="outlier-marker">
-          <line x1="1100" y1="335" x2="1100" y2="290" stroke="#f07858" stroke-width="1.5" />
-          <text x="1100" y="282" fill="#f0d8a8" font-size="28" text-anchor="middle" font-family="ui-monospace, monospace" font-weight="bold">404</text>
-          <text x="1100" y="268" fill="#f07858" font-size="11" text-anchor="middle" font-family="ui-monospace, monospace">p &lt; 0.0001</text>
-          <circle cx="1100" cy="335" r="5" fill="#f07858" />
-        </g>
-      </svg>
+    <div class="error-actions">
+      <a href="/" class="error-btn">Go home</a>
     </div>
+
   </section>
 </BaseLayout>
 
@@ -53,100 +47,166 @@ const { meta, options } = loadPage('404');
   .error-page {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     min-height: calc(100vh - var(--header-height));
+    padding: 3rem var(--container-padding) 2rem;
+    text-align: center;
   }
 
-  .error-content {
-    padding-block: 3rem 2rem;
+  .error-top {
+    margin-bottom: 3rem;
   }
 
   .error-eyebrow {
     font-family: var(--font-mono);
     font-size: var(--text-xs);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--potters-clay);
-    margin-bottom: 0.5rem;
+    letter-spacing: 0.2em;
+    color: var(--sienna);
+    margin-bottom: 1rem;
   }
 
   .error-heading {
     font-family: var(--font-display);
     font-style: italic;
     font-weight: 400;
-    font-size: clamp(2.5rem, 8vw, 5rem);
-    line-height: 1.05;
+    font-size: clamp(3rem, 10vw, 5rem);
+    line-height: 0.9;
     color: var(--parchment);
-    max-width: 14ch;
     margin-bottom: 1.5rem;
+  }
+
+  .error-sub {
+    font-size: var(--text-base);
+    color: var(--teak);
+    line-height: var(--leading-relaxed);
+    max-width: 48ch;
+    margin-inline: auto;
+  }
+
+  .error-ci {
+    width: 100%;
+    max-width: 52rem;
+    margin-bottom: 3rem;
+  }
+
+  .ci-label {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.15em;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  .ci-bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .ci-range {
+    flex: 1;
+    height: 2.25rem;
+    background: rgba(144, 184, 120, 0.15);
+    border: 0.0625rem solid var(--olivine);
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .ci-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--olivine);
+    border-radius: 50%;
+    opacity: 0.6;
+  }
+
+  .ci-outlier {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .ci-404 {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-2xl);
+    color: var(--sienna);
+    line-height: 1;
+  }
+
+  .ci-dot-red {
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--sienna);
+    border-radius: 50%;
+    animation: pulse404 2s ease-in-out infinite;
+  }
+
+  .ci-you {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    letter-spacing: 0.15em;
+    color: var(--sienna);
+  }
+
+  .ci-labels {
+    display: flex;
+    justify-content: space-between;
+    max-width: calc(100% - 5rem);
+    margin-top: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--potters-clay);
   }
 
   .error-actions {
     display: flex;
     gap: 0.75rem;
-    flex-wrap: wrap;
   }
 
   .error-btn {
-    padding: 0.5rem 1.25rem;
-    border-radius: 0.375rem;
-    font-family: var(--font-sans);
-    font-size: var(--text-sm);
-    text-decoration: none;
-    transition: background-color var(--transition-fast), border-color var(--transition-fast);
-  }
-
-  .error-btn-primary {
+    padding: 0.625rem 1.5rem;
     background: var(--parchment);
     border: 0.0625rem solid var(--teak);
+    border-radius: 0.375rem;
     color: var(--graphite);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
     font-weight: 500;
+    text-decoration: none;
+    transition: background-color var(--transition-fast);
   }
 
-  .error-btn-primary:hover {
+  .error-btn:hover {
     background: var(--colonial);
   }
 
-  .error-viz {
-    margin-top: auto;
-    margin-bottom: -0.0625rem;
-  }
-
-  .bell-svg {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .outlier-marker {
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+  @keyframes pulse404 {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(240, 120, 88, 0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 0.5rem rgba(240, 120, 88, 0); }
   }
 
   @media (max-width: 30em) {
-    .error-content {
-      padding-block: 2rem 1rem;
-    }
-
     .error-heading {
-      font-size: 2rem;
+      font-size: 2.5rem;
     }
 
-    .error-row {
-      flex-direction: column;
+    .ci-bar {
       gap: 1rem;
     }
 
-    .error-actions {
-      flex-direction: column;
-      width: 100%;
+    .ci-404 {
+      font-size: var(--text-xl);
     }
 
-    .error-btn {
-      text-align: center;
+    .error-sub br {
+      display: none;
     }
   }
 </style>
