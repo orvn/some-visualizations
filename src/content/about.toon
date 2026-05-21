@@ -1,12 +1,12 @@
 meta:
   title: About
   description: Interactive visualizations that make abstract concepts tangible.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 
 content:
   heading: About
   paragraphs[1]:
-    - "This site contains a collection of interactive visualizations meant to make abstract ideas more concrete. Some may explore concepts from math and computer science, while others use real data to surface patterns that are hard to see through conventional text or tabular formats."
+    - "Hey! This site features a collection of interactive visualizations designed to make abstract ideas more concrete. Concepts illustrated range from first principles in math and computer science, to visualization of real data to surface patterns that are hard to see through conventional text or tabular formats. New content and categories are always being added. To report a bug or suggest a feature, open a Github issue."
 

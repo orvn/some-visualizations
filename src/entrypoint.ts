@@ -3,6 +3,16 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Filler, 
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController);
 
+// On mobile, make charts taller by reducing aspect ratios
+Chart.register({
+  id: 'mobileAspect',
+  beforeInit(chart: any) {
+    if (window.innerWidth < 768 && chart.options.aspectRatio && chart.options.aspectRatio > 1.4) {
+      chart.options.aspectRatio = Math.max(1.2, chart.options.aspectRatio * 0.55);
+    }
+  },
+});
+
 const MEAN = 0;
 const X_VALS: number[] = [];
 for (let x = -6; x <= 6; x += 0.12) X_VALS.push(parseFloat(x.toFixed(2)));
@@ -257,9 +267,12 @@ export default (Alpine: Alpine) => {
         const d3 = window.d3;
         if (!d3) return;
 
-        const margin = { top: 15, right: 50, bottom: 50, left: 50 };
-        const width = 900 - margin.left - margin.right;
-        const height = 500 - margin.top - margin.bottom;
+        const isMob = window.innerWidth < 480;
+        const margin = isMob
+          ? { top: 15, right: 30, bottom: 60, left: 60 }
+          : { top: 15, right: 50, bottom: 50, left: 50 };
+        const width = (isMob ? 450 : 900) - margin.left - margin.right;
+        const height = (isMob ? 380 : 500) - margin.top - margin.bottom;
 
         xScale = d3.scale.linear().range([0, width]).domain([0, 1]);
         yScale = d3.scale.linear().range([height, 0]).domain([0, ymax]);
@@ -765,7 +778,7 @@ export default (Alpine: Alpine) => {
             animation: false,
             responsive: true,
             maintainAspectRatio: true,
-            aspectRatio: 2.4,
+            aspectRatio: window.innerWidth < 480 ? 0.75 : 2.4,
             plugins: {
               legend: {
                 display: true,

@@ -48,7 +48,7 @@ const jsonLD = {
         </div>
 
         <canvas id="poisson-timeline" class="timeline-canvas"></canvas>
-        <p class="stat-line" x-text="info">&nbsp;</p>
+        <p class="stat-line" x-html="info.replace(/  ·  /g, '<br class=stat-break>')">&nbsp;</p>
       </div>
 
       <div class="card">
@@ -215,6 +215,16 @@ const jsonLD = {
   canvas {
     display: block;
     width: 100% !important;
+  }
+
+  .stat-line :global(.stat-break) {
+    display: none;
+  }
+
+  @media (max-width: 30em) {
+    .stat-line :global(.stat-break) {
+      display: block;
+    }
   }
 
   .stat-line {

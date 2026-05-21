@@ -272,4 +272,24 @@ const jsonLD = {
     color: var(--parchment);
     font-weight: normal;
   }
+
+  @media (max-width: 30em) {
+    .controls-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+
+    .slider-row {
+      min-width: 0;
+    }
+
+    .btn-resample {
+      align-self: flex-end;
+    }
+
+    .theta-row .slider-val {
+      font-size: var(--text-xs);
+    }
+  }
 </style>

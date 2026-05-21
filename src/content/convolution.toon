@@ -1,7 +1,7 @@
 meta:
   title: "Convolution"
   description: Animated flip-and-slide visualization showing how the sum of two independent random variables produces a new distribution.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 

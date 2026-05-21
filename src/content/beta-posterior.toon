@@ -1,7 +1,7 @@
 meta:
   title: "Beta Posterior"
   description: Bayesian inference on a coin's bias using the beta distribution, visualized across 150 sequential flips.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 

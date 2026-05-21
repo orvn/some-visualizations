@@ -1,7 +1,7 @@
 meta:
   title: "Law of Large Numbers"
   description: Sample mean convergence with Markov, Chebyshev, and Chernoff concentration bounds compared side by side.
-  og_image: /og-default.png
+  og_image: /og-image.png
 
 options: null
 
