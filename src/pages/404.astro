@@ -132,7 +132,7 @@ const { meta, options } = loadPage('404');
   }
 
   .ci-range {
-    flex: 0.70;
+    flex: 0.7;
     height: 2.25rem;
     background: rgba(144, 184, 120, 0.15);
     border-left: 0.0625rem solid var(--olivine);
@@ -232,6 +232,13 @@ const { meta, options } = loadPage('404');
     50% { opacity: 0.75; box-shadow: 0 0 0 1rem rgba(240, 120, 88, 0); }
   }
 
+  @media (max-width: 60em) {
+    .ci-you {
+      white-space: normal;
+      max-width: 5rem;
+    }
+  }
+
   @media (max-width: 30em) {
     .error-heading {
       font-size: 2.5rem;
@@ -239,6 +246,22 @@ const { meta, options } = loadPage('404');
 
     .ci-bar {
       gap: 1rem;
+    }
+
+    .ci-range {
+      flex: 0.5;
+    }
+
+    .ci-labels {
+      width: 55%;
+    }
+
+    .ci-outlier {
+      right: 1rem;
+    }
+
+    .ci-outlier {
+      right: 1rem;
     }
 
     .ci-404 {
