@@ -1829,28 +1829,40 @@ export default (Alpine: Alpine) => {
     let histChart: Chart | null = null;
     let walkTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const STATES = 4;
-    const STATE_LABELS = ['i', 'j', 'k', 'l'];
-    const COLORS = ['#f0d8a8', '#90b878', '#f07858', '#e8a050'];
+    const STATES = 7;
+    const STATE_LABELS = ['i', 'j', 'k', 'l', 'm', 'n', 'o'];
+    const COLORS = ['#f0d8a8', '#90b878', '#f07858', '#e8a050', '#b89470', '#f0d8a8', '#90b878'];
 
-    // Default transition matrix (rows must sum to 1)
+    // Transition matrix from lecture diagram (states 1-7 mapped to i-o)
+    // {i,j,k} recurrent class 1, {m,o,n} recurrent class 2
+    // l is transient: reachable from k, sends to m and n, n can send back
     function defaultMatrix(): number[][] {
       return [
-        [0.2, 0.5, 0.2, 0.1],
-        [0.3, 0.1, 0.4, 0.2],
-        [0.1, 0.3, 0.3, 0.3],
-        [0.4, 0.1, 0.1, 0.4],
+      // i     j     k     l     m     n     o
+        [0.4,  0.6,  0,    0,    0,    0,    0   ], // i: self 0.4, →j 0.6
+        [0.2,  0,    0.8,  0,    0,    0,    0   ], // j: →i 0.2, →k 0.8
+        [0,    0,    0.6,  0.4,  0,    0,    0   ], // k: self 0.6, →l 0.4
+        [0,    0,    0.5,  0,    0.3,  0.2,  0   ], // l: →k 0.5, →m 0.3, →n 0.2
+        [0,    0,    0,    0,    0,    0,    1   ], // m: →o 1
+        [0,    0,    0,    0.3,  0,    0,    0.7 ], // n: →l 0.3, →o 0.7
+        [0,    0,    0,    0,    0,    1,    0   ], // o: →n 1
       ];
     }
 
     function statePositions(W: number, H: number): [number, number][] {
-      const cx = W / 2;
-      const cy = H / 2;
-      const r = Math.min(cx, cy) * 0.55;
-      return STATE_LABELS.map((_, i) => {
-        const angle = -Math.PI / 2 + (2 * Math.PI * i) / STATES;
-        return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
-      });
+      const px = 60;
+      const py = 50;
+      const uw = W - px * 2;
+      const uh = H - py * 2;
+      return [
+        [px + uw * 0.0,  py + uh * 0.45], // i
+        [px + uw * 0.17, py + uh * 0.45], // j
+        [px + uw * 0.34, py + uh * 0.45], // k
+        [px + uw * 0.58, py + uh * 0.08], // l (far up-right from k)
+        [px + uw * 0.82, py + uh * 0.08], // m (far right)
+        [px + uw * 0.52, py + uh * 0.88], // n (bottom center)
+        [px + uw * 0.78, py + uh * 0.88], // o (bottom right)
+      ];
     }
 
     function drawDiagram(matrix: number[][], current: number, visits: number[]) {
@@ -1875,61 +1887,117 @@ export default (Alpine: Alpine) => {
           const nx = dx / dist;
           const ny = dy / dist;
 
-          // Offset for bidirectional edges
-          const ox = -ny * 6;
-          const oy = nx * 6;
+          // Perpendicular offset: use canonical direction (lower→higher index) so
+          // bidirectional pairs consistently separate instead of both curving the same way
+          const hasBoth = matrix[j][i] > 0.01;
+          const curveAmt = hasBoth ? 12 : 8;
+          const lowIdx = Math.min(i, j);
+          const highIdx = Math.max(i, j);
+          const [lx, ly] = pos[lowIdx];
+          const [hx, hy] = pos[highIdx];
+          const refDx = hx - lx;
+          const refDy = hy - ly;
+          const refDist = Math.sqrt(refDx * refDx + refDy * refDy);
+          const perpX = (refDy / refDist) * curveAmt;
+          const perpY = -(refDx / refDist) * curveAmt;
+          const side = hasBoth ? (i < j ? 1 : -1) : 1;
+          const ox = perpX * side;
+          const oy = perpY * side;
 
           const sx = x1 + nx * nodeR + ox;
           const sy = y1 + ny * nodeR + oy;
           const ex = x2 - nx * (nodeR + 6) + ox;
           const ey = y2 - ny * (nodeR + 6) + oy;
 
-          const alpha = Math.min(0.8, matrix[i][j] * 1.5);
-          ctx.strokeStyle = `rgba(184,148,112,${alpha})`;
-          ctx.lineWidth = Math.max(0.5, matrix[i][j] * 3);
+          ctx.strokeStyle = 'rgba(184,148,112,0.6)';
+          ctx.lineWidth = 1;
+
+          // Curved edge via quadratic bezier
+          const curveMult = hasBoth ? 4 : 2.5;
+          const cpx = (sx + ex) / 2 + ox * curveMult;
+          const cpy = (sy + ey) / 2 + oy * curveMult;
           ctx.beginPath();
           ctx.moveTo(sx, sy);
-          ctx.lineTo(ex, ey);
+          ctx.quadraticCurveTo(cpx, cpy, ex, ey);
           ctx.stroke();
 
-          // Arrowhead
+          // Arrowhead (aligned to curve tangent at endpoint)
+          const t = 0.95;
+          const tangentX = 2 * (1 - t) * (cpx - sx) + 2 * t * (ex - cpx);
+          const tangentY = 2 * (1 - t) * (cpy - sy) + 2 * t * (ey - cpy);
+          const tLen = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
+          const tnx = tangentX / tLen;
+          const tny = tangentY / tLen;
           const aLen = 6;
-          ctx.fillStyle = `rgba(184,148,112,${alpha})`;
+          ctx.fillStyle = 'rgba(184,148,112,0.6)';
           ctx.beginPath();
-          ctx.moveTo(ex + nx * aLen, ey + ny * aLen);
-          ctx.lineTo(ex - ny * 3, ey + nx * 3);
-          ctx.lineTo(ex + ny * 3, ey - nx * 3);
+          ctx.moveTo(ex + tnx * aLen, ey + tny * aLen);
+          ctx.lineTo(ex - tny * 3, ey + tnx * 3);
+          ctx.lineTo(ex + tny * 3, ey - tnx * 3);
           ctx.closePath();
           ctx.fill();
 
-          // Probability label
+          // Probability label along the curve
           if (matrix[i][j] >= 0.05) {
-            const mx = (sx + ex) / 2 + ox * 0.8;
-            const my = (sy + ey) / 2 + oy * 0.8;
+            const mx = cpx + ox * 0.8;
+            const my = cpy + oy * 0.8;
             ctx.fillStyle = 'rgba(184,148,112,0.7)';
             ctx.font = '9px ui-monospace, monospace';
             ctx.textAlign = 'center';
-            ctx.fillText(matrix[i][j].toFixed(2), mx, my);
+            ctx.fillText(matrix[i][j].toFixed(1), mx, my);
           }
         }
       }
 
-      // Self-loops
+      // Self-loops as horseshoe arcs (above for top/mid nodes, below for bottom nodes)
       for (let i = 0; i < STATES; i++) {
         if (matrix[i][i] < 0.01) continue;
         const [x, y] = pos[i];
-        const angle = -Math.PI / 2 + (2 * Math.PI * i) / STATES;
-        const lx = x + Math.cos(angle) * (nodeR + 12);
-        const ly = y + Math.sin(angle) * (nodeR + 12);
-        ctx.strokeStyle = `rgba(184,148,112,${Math.min(0.6, matrix[i][i])})`;
+        const loopR = 12;
+        const isBottom = y > H * 0.6;
+        const loopCy = isBottom ? y + nodeR + loopR - 2 : y - nodeR - loopR + 2;
+
+        ctx.strokeStyle = 'rgba(184,148,112,0.6)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(lx, ly, 8, 0, Math.PI * 2);
+        if (isBottom) {
+          // Horseshoe below node: arc traces bottom half, gap at top (near node)
+          ctx.arc(x, loopCy, loopR, Math.PI * 1.15, Math.PI * 1.85, true);
+        } else {
+          // Horseshoe above node: arc traces top half, gap at bottom (near node)
+          ctx.arc(x, loopCy, loopR, Math.PI * 0.85, Math.PI * 0.15);
+        }
         ctx.stroke();
-        ctx.fillStyle = 'rgba(184,148,112,0.5)';
-        ctx.font = '8px ui-monospace, monospace';
+
+        // Arrowhead at end of arc
+        ctx.fillStyle = 'rgba(184,148,112,0.6)';
+        ctx.beginPath();
+        if (isBottom) {
+          // Arrow points upward (toward node)
+          const endA = Math.PI * 1.85;
+          const ax = x + loopR * Math.cos(endA);
+          const ay = loopCy + loopR * Math.sin(endA);
+          ctx.moveTo(ax + 1, ay - 5);
+          ctx.lineTo(ax - 4, ay + 2);
+          ctx.lineTo(ax + 4, ay + 2);
+        } else {
+          // Arrow points downward (toward node)
+          const endA = Math.PI * 0.15;
+          const ax = x + loopR * Math.cos(endA);
+          const ay = loopCy + loopR * Math.sin(endA);
+          ctx.moveTo(ax + 1, ay + 5);
+          ctx.lineTo(ax - 4, ay - 2);
+          ctx.lineTo(ax + 4, ay - 2);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Label
+        ctx.fillStyle = 'rgba(184,148,112,0.7)';
+        ctx.font = '9px ui-monospace, monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(matrix[i][i].toFixed(2), lx + Math.cos(angle) * 14, ly + Math.sin(angle) * 14);
+        const labelY = isBottom ? loopCy + loopR + 12 : loopCy - loopR - 5;
+        ctx.fillText(matrix[i][i].toFixed(1), x, labelY);
       }
 
       // Draw nodes
@@ -1946,7 +2014,7 @@ export default (Alpine: Alpine) => {
         ctx.stroke();
 
         ctx.fillStyle = isActive ? '#1a0c06' : COLORS[i];
-        ctx.font = 'bold 14px system-ui, sans-serif';
+        ctx.font = 'italic 15px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(STATE_LABELS[i], x, y);
