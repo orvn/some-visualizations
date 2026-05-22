@@ -1855,13 +1855,13 @@ export default (Alpine: Alpine) => {
       const uw = W - px * 2;
       const uh = H - py * 2;
       return [
-        [px + uw * 0.0,  py + uh * 0.45], // i
-        [px + uw * 0.17, py + uh * 0.45], // j
-        [px + uw * 0.34, py + uh * 0.45], // k
-        [px + uw * 0.58, py + uh * 0.08], // l (far up-right from k)
-        [px + uw * 0.82, py + uh * 0.08], // m (far right)
-        [px + uw * 0.52, py + uh * 0.88], // n (bottom center)
-        [px + uw * 0.78, py + uh * 0.88], // o (bottom right)
+        [px + uw * 0.0,  py + uh * 0.35], // i
+        [px + uw * 0.17, py + uh * 0.35], // j
+        [px + uw * 0.34, py + uh * 0.35], // k
+        [px + uw * 0.58, py + uh * 0.25], // l
+        [px + uw * 0.82, py + uh * 0.25], // m
+        [px + uw * 0.52, py + uh * 0.72], // n
+        [px + uw * 0.78, py + uh * 0.72], // o
       ];
     }
 
@@ -1890,7 +1890,7 @@ export default (Alpine: Alpine) => {
           // Perpendicular offset: use canonical direction (lower→higher index) so
           // bidirectional pairs consistently separate instead of both curving the same way
           const hasBoth = matrix[j][i] > 0.01;
-          const curveAmt = hasBoth ? 12 : 8;
+          const curveAmt = hasBoth ? 8 : 5;
           const lowIdx = Math.min(i, j);
           const highIdx = Math.max(i, j);
           const [lx, ly] = pos[lowIdx];
@@ -1913,7 +1913,7 @@ export default (Alpine: Alpine) => {
           ctx.lineWidth = 1;
 
           // Curved edge via quadratic bezier
-          const curveMult = hasBoth ? 4 : 2.5;
+          const curveMult = hasBoth ? 2.5 : 1.5;
           const cpx = (sx + ex) / 2 + ox * curveMult;
           const cpy = (sy + ey) / 2 + oy * curveMult;
           ctx.beginPath();
