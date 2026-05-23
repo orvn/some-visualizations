@@ -1828,6 +1828,11 @@ export default (Alpine: Alpine) => {
     let diagramCtx: CanvasRenderingContext2D | null = null;
     let histChart: Chart | null = null;
     let walkTimer: ReturnType<typeof setTimeout> | null = null;
+    let pulseScale = 1;
+    let pulseT = 1;
+    let pulseRaf: number | null = null;
+    let prevState = -1;
+    let activeEdge: [number, number] | null = null;
 
     const STATES = 7;
     const STATE_LABELS = ['i', 'j', 'k', 'l', 'm', 'n', 'o'];
@@ -1909,8 +1914,14 @@ export default (Alpine: Alpine) => {
           const ex = x2 - nx * (nodeR + 6) + ox;
           const ey = y2 - ny * (nodeR + 6) + oy;
 
-          ctx.strokeStyle = 'rgba(184,148,112,0.6)';
-          ctx.lineWidth = 1;
+          const isActiveEdge = activeEdge && activeEdge[0] === i && activeEdge[1] === j;
+          const edgeGlow = isActiveEdge ? 1 - pulseT : 0;
+          const edgeAlpha = 0.6 + edgeGlow * 0.4;
+          const edgeColor = isActiveEdge
+            ? `rgba(240,216,168,${edgeAlpha})`
+            : 'rgba(184,148,112,0.6)';
+          ctx.strokeStyle = edgeColor;
+          ctx.lineWidth = isActiveEdge ? 1.5 + edgeGlow : 1;
 
           // Curved edge via quadratic bezier
           const curveMult = hasBoth ? 2.5 : 1.5;
@@ -1929,7 +1940,7 @@ export default (Alpine: Alpine) => {
           const tnx = tangentX / tLen;
           const tny = tangentY / tLen;
           const aLen = 6;
-          ctx.fillStyle = 'rgba(184,148,112,0.6)';
+          ctx.fillStyle = edgeColor;
           ctx.beginPath();
           ctx.moveTo(ex + tnx * aLen, ey + tny * aLen);
           ctx.lineTo(ex - tny * 3, ey + tnx * 3);
@@ -1957,20 +1968,24 @@ export default (Alpine: Alpine) => {
         const isBottom = y > H * 0.6;
         const loopCy = isBottom ? y + nodeR + loopR - 2 : y - nodeR - loopR + 2;
 
-        ctx.strokeStyle = 'rgba(184,148,112,0.6)';
-        ctx.lineWidth = 1;
+        const isSelfActive = activeEdge && activeEdge[0] === i && activeEdge[1] === i;
+        const selfGlow = isSelfActive ? 1 - pulseT : 0;
+        const selfAlpha = 0.6 + selfGlow * 0.4;
+        const selfColor = isSelfActive
+          ? `rgba(240,216,168,${selfAlpha})`
+          : 'rgba(184,148,112,0.6)';
+        ctx.strokeStyle = selfColor;
+        ctx.lineWidth = isSelfActive ? 1.5 + selfGlow : 1;
         ctx.beginPath();
         if (isBottom) {
-          // Horseshoe below node: arc traces bottom half, gap at top (near node)
           ctx.arc(x, loopCy, loopR, Math.PI * 1.15, Math.PI * 1.85, true);
         } else {
-          // Horseshoe above node: arc traces top half, gap at bottom (near node)
           ctx.arc(x, loopCy, loopR, Math.PI * 0.85, Math.PI * 0.15);
         }
         ctx.stroke();
 
         // Arrowhead at end of arc
-        ctx.fillStyle = 'rgba(184,148,112,0.6)';
+        ctx.fillStyle = selfColor;
         ctx.beginPath();
         if (isBottom) {
           // Arrow points upward (toward node)
@@ -2004,22 +2019,68 @@ export default (Alpine: Alpine) => {
       for (let i = 0; i < STATES; i++) {
         const [x, y] = pos[i];
         const isActive = i === current;
+        const wasPrev = i === prevState && prevState !== current;
+        const r = isActive ? nodeR * pulseScale : nodeR;
 
-        ctx.fillStyle = isActive ? COLORS[i] : 'rgba(34,15,7,0.9)';
+        // Parse node color into RGB for interpolation
+        const hex = COLORS[i];
+        const cr = parseInt(hex.slice(1, 3), 16);
+        const cg = parseInt(hex.slice(3, 5), 16);
+        const cb = parseInt(hex.slice(5, 7), 16);
+        const dark = { r: 34, g: 15, b: 7 };
+
+        let fillAlpha: number;
+        if (isActive) {
+          fillAlpha = pulseT < 1 ? 0.3 + 0.7 * Math.min(pulseT * 3, 1) : 1;
+        } else if (wasPrev) {
+          fillAlpha = 1 - pulseT;
+        } else {
+          fillAlpha = 0;
+        }
+
+        const fr = Math.round(dark.r + (cr - dark.r) * fillAlpha);
+        const fg = Math.round(dark.g + (cg - dark.g) * fillAlpha);
+        const fb = Math.round(dark.b + (cb - dark.b) * fillAlpha);
+        ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
         ctx.strokeStyle = COLORS[i];
         ctx.lineWidth = isActive ? 2.5 : 1.5;
         ctx.beginPath();
-        ctx.arc(x, y, nodeR, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = isActive ? '#1a0c06' : COLORS[i];
+        const textAlpha = fillAlpha > 0.5 ? 1 : 0;
+        ctx.fillStyle = textAlpha ? '#1a0c06' : COLORS[i];
         ctx.font = 'italic 15px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(STATE_LABELS[i], x, y);
       }
       ctx.textBaseline = 'alphabetic';
+    }
+
+    function triggerPulse(matrix: number[][], current: number, visits: number[], prev: number) {
+      if (pulseRaf) cancelAnimationFrame(pulseRaf);
+      prevState = prev;
+      activeEdge = prev >= 0 ? [prev, current] : null;
+      pulseScale = 1.08;
+      pulseT = 0;
+      const start = performance.now();
+      const duration = 220;
+      const animate = (now: number) => {
+        const t = Math.min((now - start) / duration, 1);
+        pulseT = t;
+        pulseScale = 1.08 - 0.08 * t * t;
+        drawDiagram(matrix, current, visits);
+        if (t < 1) {
+          pulseRaf = requestAnimationFrame(animate);
+        } else {
+          pulseRaf = null;
+          prevState = -1;
+          activeEdge = null;
+        }
+      };
+      pulseRaf = requestAnimationFrame(animate);
     }
 
     function updateHist(visits: number[], totalSteps: number) {
@@ -2142,7 +2203,8 @@ export default (Alpine: Alpine) => {
         const doStep = () => {
           if (!self.running) return;
           // Inline the step logic to avoid proxy issues
-          const row = self.matrix[self.current];
+          const prev = self.current;
+          const row = self.matrix[prev];
           let r = Math.random();
           let next = 0;
           for (let j = 0; j < STATES; j++) {
@@ -2155,7 +2217,7 @@ export default (Alpine: Alpine) => {
           self.visits = v;
           self.totalSteps++;
           self.stepsDisplay = String(self.totalSteps);
-          drawDiagram(self.matrix, self.current, self.visits);
+          triggerPulse(self.matrix, self.current, self.visits, prev);
           updateHist(self.visits, self.totalSteps);
 
           walkTimer = setTimeout(doStep, self.speedMs);
