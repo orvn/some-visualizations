@@ -2083,43 +2083,8 @@ export default (Alpine: Alpine) => {
       pulseRaf = requestAnimationFrame(animate);
     }
 
-    function updateHist(visits: number[], totalSteps: number) {
-      const canvas = document.getElementById('markov-hist') as HTMLCanvasElement | null;
-      if (!canvas) return;
-
-      const freq = visits.map(v => totalSteps > 0 ? v / totalSteps : 0);
-
-      if (!histChart) {
-        const existing = Chart.getChart(canvas);
-        if (existing) existing.destroy();
-        histChart = new Chart(canvas, {
-          type: 'bar',
-          data: {
-            labels: STATE_LABELS,
-            datasets: [{
-              label: 'Time in state',
-              data: freq,
-              backgroundColor: COLORS.map(c => c + '88'),
-              borderColor: COLORS,
-              borderWidth: 1,
-              barPercentage: 0.6,
-              categoryPercentage: 0.6,
-            }],
-          },
-          options: {
-            animation: { duration: 150 },
-            responsive: true, maintainAspectRatio: true, aspectRatio: 2.8,
-            plugins: { legend: { display: false }, tooltip: { enabled: false } },
-            scales: {
-              x: { ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' } },
-              y: { min: 0, max: 1, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'fraction of time', color: '#7a5a3a' } },
-            },
-          },
-        });
-      } else {
-        histChart.data.datasets[0].data = freq;
-        histChart.update();
-      }
+    function updateHist() {
+      // Bars are now rendered via Alpine reactivity in the template
     }
 
     function computeSteadyState(matrix: number[][]): number[] {
@@ -2143,18 +2108,25 @@ export default (Alpine: Alpine) => {
       visits: new Array(STATES).fill(0) as number[],
       totalSteps: 0,
       running: false,
-      speedIdx: '2',
+      speedIdx: 2,
       steadyState: [] as number[],
       stepsDisplay: '0',
 
-      get speedLabel() {
-        const labels = ['0.25×', '0.5×', '1×', '2×', '4×'];
-        return labels[parseInt(this.speedIdx)] || '1×';
-      },
-
       get speedMs() {
         const ms = [1000, 500, 250, 125, 60];
-        return ms[parseInt(this.speedIdx)] || 250;
+        return ms[this.speedIdx] || 250;
+      },
+
+      get speedMsLabel() {
+        return this.speedMs + 'ms';
+      },
+
+      speedUp() {
+        if (this.speedIdx < 4) this.speedIdx++;
+      },
+
+      speedDown() {
+        if (this.speedIdx > 0) this.speedIdx--;
       },
 
       init() {
@@ -2173,7 +2145,6 @@ export default (Alpine: Alpine) => {
           if (diagramCtx) diagramCtx.scale(dpr, dpr);
           self.recalc();
           self.draw();
-          self.start();
         };
         requestAnimationFrame(tryInit);
       },

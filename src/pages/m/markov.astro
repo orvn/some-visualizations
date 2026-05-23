@@ -35,9 +35,22 @@ const jsonLD = {
 
       <div class="card">
         <div class="card-header">
-          <p class="card-label">State diagram</p>
+          <div class="card-header-left">
+            <p class="card-label">State diagram</p>
+            <div class="step-row">
+              <span class="step-label">step</span>
+              <span class="step-counter" x-text="stepsDisplay"></span>
+            </div>
+          </div>
           <div class="walk-controls">
-            <span class="step-counter" x-text="stepsDisplay"></span>
+            <div class="speed-stepper">
+              <span class="speed-label">speed</span>
+              <span class="speed-val" x-text="speedMsLabel"></span>
+              <div class="speed-arrows">
+                <button class="speed-btn speed-up" x-on:click="speedUp()" aria-label="Faster"></button>
+                <button class="speed-btn speed-down" x-on:click="speedDown()" aria-label="Slower"></button>
+              </div>
+            </div>
             <button class="btn-action" x-on:click="running ? stop() : start()" x-text="running ? 'Pause' : 'Run'"></button>
             <button class="btn-action" x-on:click="reset()">Reset</button>
           </div>
@@ -46,25 +59,38 @@ const jsonLD = {
         <div class="diagram-row">
           <canvas id="markov-diagram" class="diagram-canvas"></canvas>
           <div class="steady-col">
-            <p class="card-label">Steady state π</p>
+            <p class="card-label">Steady state <span class="pi-symbol">π</span></p>
             <div class="steady-vals">
               <template x-for="(s, i) in steadyState" x-bind:key="i">
                 <span class="steady-val" x-text="['i','j','k','l','m','n','o'][i] + ': ' + s.toFixed(3)"></span>
               </template>
             </div>
+            <p class="card-label mini-hist-label">Time in state</p>
+            <div class="mini-hist">
+              <template x-for="(s, idx) in visits" x-bind:key="idx">
+                <div class="mini-bar-row">
+                  <span class="mini-bar-label" x-text="['i','j','k','l','m','n','o'][idx]"></span>
+                  <div class="mini-bar-track">
+                    <div class="mini-bar-fill" x-bind:style="'width:' + (totalSteps > 0 ? (s / totalSteps * 100) : 0) + '%; background:' + ['#f0d8a8','#90b878','#f07858','#e8a050','#b89470','#f0d8a8','#90b878'][idx]"></div>
+                  </div>
+                </div>
+              </template>
+              <div class="mini-bar-axis">
+                <span class="mini-bar-label"></span>
+                <div class="mini-bar-ticks">
+                  <span>0</span>
+                  <span>.25</span>
+                  <span>.5</span>
+                  <span>.75</span>
+                  <span>1</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="slider-row speed-row">
-          <span class="slider-val" x-text="speedLabel"></span>
-          <input type="range" min="0" max="4" step="1" x-model="speedIdx" />
-        </div>
       </div>
 
-      <div class="card">
-        <p class="card-label">Time spent in each state (empirical)</p>
-        <canvas id="markov-hist"></canvas>
-      </div>
 
       <div class="card">
         <p class="card-label">Transition probabilities</p>
@@ -148,11 +174,27 @@ const jsonLD = {
 
   .card-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 0.75rem;
     flex-wrap: wrap;
     gap: 0.5rem;
+  }
+
+  .card-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .card-header-left .card-label {
+    margin-bottom: 0;
+  }
+
+  .step-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
   }
 
   .card-label {
@@ -168,19 +210,96 @@ const jsonLD = {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    align-self: center;
   }
 
   .step-counter {
     font-family: var(--font-mono);
-    font-size: var(--text-lg);
+    font-size: var(--text-xs);
     color: var(--colonial);
-    min-width: 4.5rem;
+    min-width: 3rem;
     text-align: center;
-    padding: 0.2rem 0.75rem;
+    padding: 0.0625rem 0.375rem;
     background: var(--graphite);
     border: 0.0625rem solid var(--bronze);
-    border-radius: 0.3rem;
+    border-radius: 0.2rem;
     letter-spacing: 0.05em;
+  }
+
+  .step-label {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    color: var(--potters-clay);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .speed-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-right: 0.75rem;
+    align-self: center;
+  }
+
+  .speed-label {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    color: var(--potters-clay);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .speed-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--colonial);
+    min-width: 2.25rem;
+    text-align: right;
+  }
+
+  .speed-arrows {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+  }
+
+  .speed-btn {
+    display: block;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.125rem 0.375rem;
+    line-height: 0;
+    font-size: 0;
+  }
+
+  .speed-btn::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 0.3125rem solid transparent;
+    border-right: 0.3125rem solid transparent;
+    transition: border-color var(--transition-fast);
+  }
+
+  .speed-up::after {
+    border-bottom: 0.3125rem solid var(--potters-clay);
+  }
+
+  .speed-up:hover::after {
+    border-bottom-color: var(--parchment);
+  }
+
+  .speed-down::after {
+    border-top: 0.3125rem solid var(--potters-clay);
+  }
+
+  .speed-down:hover::after {
+    border-top-color: var(--parchment);
   }
 
   .btn-action {
@@ -200,7 +319,7 @@ const jsonLD = {
 
   .diagram-row {
     display: grid;
-    grid-template-columns: 1fr 10rem;
+    grid-template-columns: 1fr 14rem;
     gap: 1rem;
     align-items: start;
   }
@@ -212,23 +331,77 @@ const jsonLD = {
   }
 
   .steady-col {
-    padding-top: 0.5rem;
+    padding-top: 0.25rem;
+  }
+
+  .pi-symbol {
+    text-transform: lowercase;
   }
 
   .steady-vals {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.125rem 0.5rem;
   }
 
   .steady-vals :global(.steady-val) {
     font-family: var(--font-mono);
-    font-size: var(--text-xs);
+    font-size: 0.6875rem;
     color: var(--colonial);
   }
 
-  .speed-row {
-    margin-top: 0.5rem;
+  .mini-hist-label {
+    margin-top: 1rem;
+  }
+
+  .mini-hist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .mini-hist :global(.mini-bar-row) {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .mini-hist :global(.mini-bar-label) {
+    font: italic 0.8125rem Georgia, serif;
+    color: var(--potters-clay);
+    min-width: 0.75rem;
+    text-align: right;
+  }
+
+  .mini-hist :global(.mini-bar-track) {
+    flex: 1;
+    height: 0.25rem;
+    background: var(--bronze);
+    border-radius: 0.125rem;
+    overflow: hidden;
+  }
+
+  .mini-hist :global(.mini-bar-fill) {
+    height: 100%;
+    border-radius: 0.125rem;
+    transition: width 150ms ease;
+  }
+
+  .mini-bar-axis {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.125rem;
+  }
+
+  .mini-bar-ticks {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    color: var(--potters-clay);
+    opacity: 0.6;
   }
 
   canvas {
@@ -283,57 +456,45 @@ const jsonLD = {
     height: 0.25rem;
   }
 
-  .slider-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
 
-  .slider-val {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    color: var(--colonial);
-    min-width: 3.5rem;
-  }
-
-  input[type=range] {
+  .matrix-grid :global(input[type=range]) {
     -webkit-appearance: none;
     appearance: none;
     flex: 1;
     cursor: pointer;
-    height: 0.5rem;
+    height: 0.25rem;
     background: transparent;
     padding: 0.5rem 0;
     margin: 0;
   }
 
-  input[type=range]::-webkit-slider-runnable-track {
-    height: 0.375rem;
+  .matrix-grid :global(input[type=range]::-webkit-slider-runnable-track) {
+    height: 0.25rem;
     background: var(--bronze);
-    border-radius: 0.1875rem;
+    border-radius: 0.125rem;
   }
 
-  input[type=range]::-moz-range-track {
-    height: 0.375rem;
+  .matrix-grid :global(input[type=range]::-moz-range-track) {
+    height: 0.25rem;
     background: var(--bronze);
-    border-radius: 0.1875rem;
+    border-radius: 0.125rem;
     border: none;
   }
 
-  input[type=range]::-webkit-slider-thumb {
+  .matrix-grid :global(input[type=range]::-webkit-slider-thumb) {
     -webkit-appearance: none;
-    width: 1rem;
-    height: 1rem;
+    width: 0.75rem;
+    height: 0.75rem;
     background: var(--colonial);
     border-radius: 50%;
     border: none;
-    margin-top: -0.3125rem;
+    margin-top: -0.25rem;
     cursor: pointer;
   }
 
-  input[type=range]::-moz-range-thumb {
-    width: 1rem;
-    height: 1rem;
+  .matrix-grid :global(input[type=range]::-moz-range-thumb) {
+    width: 0.75rem;
+    height: 0.75rem;
     background: var(--colonial);
     border-radius: 50%;
     border: none;
