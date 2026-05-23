@@ -93,23 +93,28 @@ const jsonLD = {
 
 
       <div class="card">
-        <p class="card-label">Transition probabilities</p>
-        <div class="matrix-grid">
+        <p class="card-label">Adjust transition probabilities</p>
+        <div class="matrix-cards">
           <template x-for="(row, i) in matrix" x-bind:key="i">
-            <div class="matrix-row">
-              <span class="matrix-from" x-text="['i','j','k','l','m','n','o'][i] + ' →'"></span>
-              <template x-for="(val, j) in row" x-bind:key="j">
-                <div class="matrix-cell">
-                  <span class="matrix-to" x-text="['i','j','k','l','m','n','o'][j]"></span>
-                  <input type="range" min="0" max="1" step="0.05"
-                         x-bind:value="val"
-                         x-on:input="setTransition(i, j, $event.target.value)" />
-                  <span class="matrix-val" x-text="val.toFixed(2)"></span>
-                </div>
-              </template>
+            <div class="matrix-card">
+              <span class="matrix-from" x-text="['i','j','k','l','m','n','o'][i]"></span>
+              <div class="matrix-sliders">
+                <template x-for="(val, j) in row" x-bind:key="j">
+                  <template x-if="adj[i][j]">
+                    <div class="matrix-slider">
+                      <span class="matrix-to" x-text="'→ ' + ['i','j','k','l','m','n','o'][j]"></span>
+                      <input type="range" min="0" max="1" step="0.05"
+                             x-bind:value="val"
+                             x-on:input="setTransition(i, j, $event.target.value)" />
+                      <span class="matrix-val" x-text="val.toFixed(2)"></span>
+                    </div>
+                  </template>
+                </template>
+              </div>
             </div>
           </template>
         </div>
+        <p class="matrix-footnote">* Setting a transition probability to 0 removes that edge from the state model</p>
       </div>
 
       <div class="insight">
@@ -409,92 +414,115 @@ const jsonLD = {
     width: 100% !important;
   }
 
-  .matrix-grid {
+  .matrix-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .matrix-cards :global(.matrix-card) {
+    flex: 0 0 calc(33.333% - 0.5rem);
+    background: var(--graphite);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.625rem;
+    min-width: 0;
+  }
+
+  @media (max-width: 48em) {
+    .matrix-cards :global(.matrix-card) {
+      flex: 0 0 calc(50% - 0.375rem);
+    }
+  }
+
+  @media (max-width: 30em) {
+    .matrix-cards :global(.matrix-card) {
+      flex: 0 0 100%;
+    }
+  }
+
+  .matrix-cards :global(.matrix-from) {
+    font: italic 1rem Georgia, serif;
+    color: var(--colonial);
+    display: block;
+    margin-bottom: 0.375rem;
+  }
+
+  .matrix-cards :global(.matrix-sliders) {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
+    min-width: 0;
+    overflow: hidden;
   }
 
-  .matrix-grid :global(.matrix-row) {
+  .matrix-cards :global(.matrix-slider) {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.375rem;
+    min-width: 0;
   }
 
-  .matrix-grid :global(.matrix-from) {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--teak);
-    min-width: 2.5rem;
-    text-align: right;
-  }
-
-  .matrix-grid :global(.matrix-cell) {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    flex: 1;
-  }
-
-  .matrix-grid :global(.matrix-to) {
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
+  .matrix-cards :global(.matrix-to) {
+    font: italic 0.6875rem Georgia, serif;
     color: var(--potters-clay);
-    min-width: 0.75rem;
+    min-width: 1.25rem;
   }
 
-  .matrix-grid :global(.matrix-val) {
+  .matrix-cards :global(.matrix-val) {
     font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--colonial);
-    min-width: 1.75rem;
+    min-width: 1.5rem;
     text-align: right;
   }
 
-  .matrix-grid :global(input[type=range]) {
-    flex: 1;
-    height: 0.25rem;
+  .matrix-footnote {
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    color: var(--potters-clay);
+    margin-top: 0.75rem;
   }
 
-
-  .matrix-grid :global(input[type=range]) {
+  .matrix-cards :global(input[type=range]) {
     -webkit-appearance: none;
     appearance: none;
     flex: 1;
+    min-width: 0;
     cursor: pointer;
-    height: 0.25rem;
+    height: 0.1875rem;
     background: transparent;
-    padding: 0.5rem 0;
+    padding: 0.375rem 0;
     margin: 0;
   }
 
-  .matrix-grid :global(input[type=range]::-webkit-slider-runnable-track) {
-    height: 0.25rem;
+  .matrix-cards :global(input[type=range]::-webkit-slider-runnable-track) {
+    height: 0.1875rem;
     background: var(--bronze);
-    border-radius: 0.125rem;
+    border-radius: 0.0625rem;
   }
 
-  .matrix-grid :global(input[type=range]::-moz-range-track) {
-    height: 0.25rem;
+  .matrix-cards :global(input[type=range]::-moz-range-track) {
+    height: 0.1875rem;
     background: var(--bronze);
-    border-radius: 0.125rem;
+    border-radius: 0.0625rem;
     border: none;
   }
 
-  .matrix-grid :global(input[type=range]::-webkit-slider-thumb) {
+  .matrix-cards :global(input[type=range]::-webkit-slider-thumb) {
     -webkit-appearance: none;
-    width: 0.75rem;
-    height: 0.75rem;
+    width: 0.625rem;
+    height: 0.625rem;
     background: var(--colonial);
     border-radius: 50%;
     border: none;
-    margin-top: -0.25rem;
+    margin-top: -0.21875rem;
     cursor: pointer;
   }
 
-  .matrix-grid :global(input[type=range]::-moz-range-thumb) {
-    width: 0.75rem;
-    height: 0.75rem;
+  .matrix-cards :global(input[type=range]::-moz-range-thumb) {
+    width: 0.625rem;
+    height: 0.625rem;
     background: var(--colonial);
     border-radius: 50%;
     border: none;

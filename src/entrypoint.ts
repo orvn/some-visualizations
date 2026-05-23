@@ -1841,6 +1841,18 @@ export default (Alpine: Alpine) => {
     // Transition matrix from lecture diagram (states 1-7 mapped to i-o)
     // {i,j,k} recurrent class 1, {m,o,n} recurrent class 2
     // l is transient: reachable from k, sends to m and n, n can send back
+    // Adjacency: which edges exist in the graph (symmetric + self-loops)
+    const ADJ: boolean[][] = [
+    // i     j     k     l     m     n     o
+      [true, true, false,false,false,false,false], // i
+      [true, false,true, false,false,false,false], // j
+      [false,true, true, true, false,false,false], // k
+      [false,false,true, false,true, true, false], // l
+      [false,false,false,true, false,false,true ], // m
+      [false,false,false,true, false,false,true ], // n
+      [false,false,false,false,true, true, false], // o
+    ];
+
     function defaultMatrix(): number[][] {
       return [
       // i     j     k     l     m     n     o
@@ -2104,6 +2116,7 @@ export default (Alpine: Alpine) => {
 
     return {
       matrix: defaultMatrix(),
+      adj: ADJ,
       current: 0,
       visits: new Array(STATES).fill(0) as number[],
       totalSteps: 0,
