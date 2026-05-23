@@ -1,7 +1,7 @@
 import type { Alpine } from 'alpinejs';
-import { Chart, LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController } from 'chart.js';
+import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController } from 'chart.js';
 
-Chart.register(LineController, LineElement, PointElement, LinearScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController);
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Legend, Tooltip, BarController, BarElement, ScatterController);
 
 // On mobile, make charts taller by reducing aspect ratios
 Chart.register({
@@ -2029,6 +2029,8 @@ export default (Alpine: Alpine) => {
       const freq = visits.map(v => totalSteps > 0 ? v / totalSteps : 0);
 
       if (!histChart) {
+        const existing = Chart.getChart(canvas);
+        if (existing) existing.destroy();
         histChart = new Chart(canvas, {
           type: 'bar',
           data: {
@@ -2080,9 +2082,19 @@ export default (Alpine: Alpine) => {
       visits: new Array(STATES).fill(0) as number[],
       totalSteps: 0,
       running: false,
-      speed: '50',
+      speedIdx: '2',
       steadyState: [] as number[],
       stepsDisplay: '0',
+
+      get speedLabel() {
+        const labels = ['0.25×', '0.5×', '1×', '2×', '4×'];
+        return labels[parseInt(this.speedIdx)] || '1×';
+      },
+
+      get speedMs() {
+        const ms = [1000, 500, 250, 125, 60];
+        return ms[parseInt(this.speedIdx)] || 250;
+      },
 
       init() {
         const self = this;
@@ -2100,6 +2112,7 @@ export default (Alpine: Alpine) => {
           if (diagramCtx) diagramCtx.scale(dpr, dpr);
           self.recalc();
           self.draw();
+          self.start();
         };
         requestAnimationFrame(tryInit);
       },
@@ -2120,24 +2133,6 @@ export default (Alpine: Alpine) => {
         this.totalSteps = 0;
         this.stepsDisplay = '0';
         this.draw();
-      },
-
-      step() {
-        const row = this.matrix[this.current];
-        let r = Math.random();
-        let next = 0;
-        for (let j = 0; j < STATES; j++) {
-          r -= row[j];
-          if (r <= 0) { next = j; break; }
-        }
-        this.current = next;
-        const v = [...this.visits];
-        v[next]++;
-        this.visits = v;
-        this.totalSteps++;
-        this.stepsDisplay = String(this.totalSteps);
-        drawDiagram(this.matrix, this.current, this.visits);
-        updateHist(this.visits, this.totalSteps);
       },
 
       start() {
@@ -2163,8 +2158,7 @@ export default (Alpine: Alpine) => {
           drawDiagram(self.matrix, self.current, self.visits);
           updateHist(self.visits, self.totalSteps);
 
-          const ms = Math.max(5, 200 - parseInt(self.speed) * 2);
-          walkTimer = setTimeout(doStep, ms);
+          walkTimer = setTimeout(doStep, self.speedMs);
         };
         doStep();
       },

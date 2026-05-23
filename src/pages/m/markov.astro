@@ -38,8 +38,7 @@ const jsonLD = {
           <p class="card-label">State diagram</p>
           <div class="walk-controls">
             <span class="step-count" x-text="stepsDisplay + ' steps'"></span>
-            <button class="btn-action" x-on:click="step()" x-bind:disabled="running">Step</button>
-            <button class="btn-action" x-on:click="running ? stop() : start()" x-text="running ? 'Stop' : 'Run'"></button>
+            <button class="btn-action" x-on:click="running ? stop() : start()" x-text="running ? 'Pause' : 'Run'"></button>
             <button class="btn-action" x-on:click="reset()">Reset</button>
           </div>
         </div>
@@ -57,8 +56,8 @@ const jsonLD = {
         </div>
 
         <div class="slider-row speed-row">
-          <span class="slider-val">speed</span>
-          <input type="range" min="1" max="100" step="1" x-model="speed" />
+          <span class="slider-val" x-text="speedLabel"></span>
+          <input type="range" min="0" max="4" step="1" x-model="speedIdx" />
         </div>
       </div>
 
