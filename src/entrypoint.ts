@@ -1867,20 +1867,43 @@ export default (Alpine: Alpine) => {
     }
 
     function statePositions(W: number, H: number): [number, number][] {
-      const px = 60;
-      const py = 50;
-      const uw = W - px * 2;
-      const uh = H - py * 2;
+      const scale = Math.min(W / 600, 1);
+      const pLeft = 30 * scale + 20;
+      const pRight = 10 + 10 * scale;
+      const pTop = 20 * scale + 5;
+      const pBottom = 10 * scale + 5;
+      const uw = W - pLeft - pRight;
+      const uh = H - pTop - pBottom;
       return [
-        [px + uw * 0.0,  py + uh * 0.35], // i
-        [px + uw * 0.17, py + uh * 0.35], // j
-        [px + uw * 0.34, py + uh * 0.35], // k
-        [px + uw * 0.58, py + uh * 0.25], // l
-        [px + uw * 0.82, py + uh * 0.25], // m
-        [px + uw * 0.52, py + uh * 0.72], // n
-        [px + uw * 0.78, py + uh * 0.72], // o
+        [pLeft + uw * 0.0,  pTop + uh * 0.4],  // i
+        [pLeft + uw * 0.18, pTop + uh * 0.4],  // j
+        [pLeft + uw * 0.36, pTop + uh * 0.4],  // k
+        [pLeft + uw * 0.64, pTop + uh * 0.25], // l
+        [pLeft + uw * 0.9,  pTop + uh * 0.25], // m
+        [pLeft + uw * 0.58, pTop + uh * 0.6],  // n
+        [pLeft + uw * 0.86, pTop + uh * 0.6],  // o
       ];
     }
+
+    // Per-edge label offsets: [dx, dy] in scaled pixels, added after default placement
+    // Key format: "i->j" using state letters. Tweak these to fix overlapping labels.
+    const LABEL_NUDGE: Record<string, [number, number]> = {
+      'i->i': [0, 0],   // self-loop
+      'i->j': [15, 5],
+      'j->i': [0, 0],
+      'j->k': [0, 0],
+      'k->j': [0, 0],
+      'k->k': [0, 0],   // self-loop
+      'k->l': [25, 0],
+      'l->k': [5, -5],  // push down-left, away from k->l label
+      'l->m': [0, 0],
+      'l->n': [0, 0],
+      'n->l': [-5, 50],
+      'l->o': [0, 0],
+      'o->n': [0, 0],
+      'n->o': [25, 10],
+      'm->o': [8, 0],    // push right, away from line
+    };
 
     function drawDiagram(matrix: number[][], current: number, visits: number[]) {
       if (!diagramCtx || !diagramCanvas) return;
@@ -1890,7 +1913,8 @@ export default (Alpine: Alpine) => {
       ctx.clearRect(0, 0, W * 3, H * 3);
 
       const pos = statePositions(W, H);
-      const nodeR = 22;
+      const scale = Math.min(W / 600, 1);
+      const nodeR = Math.round(22 * scale);
 
       // Draw edges
       for (let i = 0; i < STATES; i++) {
@@ -1907,7 +1931,7 @@ export default (Alpine: Alpine) => {
           // Perpendicular offset: use canonical direction (lower→higher index) so
           // bidirectional pairs consistently separate instead of both curving the same way
           const hasBoth = matrix[j][i] > 0.01;
-          const curveAmt = hasBoth ? 8 : 5;
+          const curveAmt = (hasBoth ? 8 : 5) * scale;
           const lowIdx = Math.min(i, j);
           const highIdx = Math.max(i, j);
           const [lx, ly] = pos[lowIdx];
@@ -1923,7 +1947,7 @@ export default (Alpine: Alpine) => {
 
           const sx = x1 + nx * nodeR + ox;
           const sy = y1 + ny * nodeR + oy;
-          const ex = x2 - nx * (nodeR + 6) + ox;
+          const ex = x2 - nx * (nodeR + 6 * scale) + ox;
           const ey = y2 - ny * (nodeR + 6) + oy;
 
           const isActiveEdge = activeEdge && activeEdge[0] === i && activeEdge[1] === j;
@@ -1951,21 +1975,27 @@ export default (Alpine: Alpine) => {
           const tLen = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
           const tnx = tangentX / tLen;
           const tny = tangentY / tLen;
-          const aLen = 6;
+          const aLen = 10 * scale;
+          const aW = 5 * scale;
           ctx.fillStyle = edgeColor;
           ctx.beginPath();
           ctx.moveTo(ex + tnx * aLen, ey + tny * aLen);
-          ctx.lineTo(ex - tny * 3, ey + tnx * 3);
-          ctx.lineTo(ex + tny * 3, ey - tnx * 3);
+          ctx.lineTo(ex - tny * aW, ey + tnx * aW);
+          ctx.lineTo(ex + tny * aW, ey - tnx * aW);
           ctx.closePath();
           ctx.fill();
 
           // Probability label along the curve
           if (matrix[i][j] >= 0.05) {
-            const mx = cpx + ox * 0.8;
-            const my = cpy + oy * 0.8;
+            const lt = hasBoth ? (i < j ? 0.3 : 0.7) : 0.5;
+            const lx = (1-lt)*(1-lt)*sx + 2*(1-lt)*lt*cpx + lt*lt*ex;
+            const ly = (1-lt)*(1-lt)*sy + 2*(1-lt)*lt*cpy + lt*lt*ey;
+            const edgeKey = STATE_LABELS[i] + '->' + STATE_LABELS[j];
+            const nudge = LABEL_NUDGE[edgeKey] || [0, 0];
+            const mx = lx + ox * 3 + nudge[0] * scale;
+            const my = ly + oy * 3 + nudge[1] * scale;
             ctx.fillStyle = 'rgba(184,148,112,0.7)';
-            ctx.font = '9px ui-monospace, monospace';
+            ctx.font = `${Math.round(13 * scale)}px ui-monospace, monospace`;
             ctx.textAlign = 'center';
             ctx.fillText(matrix[i][j].toFixed(1), mx, my);
           }
@@ -1976,7 +2006,7 @@ export default (Alpine: Alpine) => {
       for (let i = 0; i < STATES; i++) {
         if (matrix[i][i] < 0.01) continue;
         const [x, y] = pos[i];
-        const loopR = 12;
+        const loopR = Math.round(12 * scale);
         const isBottom = y > H * 0.6;
         const loopCy = isBottom ? y + nodeR + loopR - 2 : y - nodeR - loopR + 2;
 
@@ -2004,27 +2034,29 @@ export default (Alpine: Alpine) => {
           const endA = Math.PI * 1.85;
           const ax = x + loopR * Math.cos(endA);
           const ay = loopCy + loopR * Math.sin(endA);
-          ctx.moveTo(ax + 1, ay - 5);
-          ctx.lineTo(ax - 4, ay + 2);
-          ctx.lineTo(ax + 4, ay + 2);
+          ctx.moveTo(ax + 1 * scale, ay - 7 * scale);
+          ctx.lineTo(ax - 6 * scale, ay + 3 * scale);
+          ctx.lineTo(ax + 6 * scale, ay + 3 * scale);
         } else {
           // Arrow points downward (toward node)
           const endA = Math.PI * 0.15;
           const ax = x + loopR * Math.cos(endA);
           const ay = loopCy + loopR * Math.sin(endA);
-          ctx.moveTo(ax + 1, ay + 5);
-          ctx.lineTo(ax - 4, ay - 2);
-          ctx.lineTo(ax + 4, ay - 2);
+          ctx.moveTo(ax + 1 * scale, ay + 7 * scale);
+          ctx.lineTo(ax - 6 * scale, ay - 3 * scale);
+          ctx.lineTo(ax + 6 * scale, ay - 3 * scale);
         }
         ctx.closePath();
         ctx.fill();
 
         // Label
         ctx.fillStyle = 'rgba(184,148,112,0.7)';
-        ctx.font = '9px ui-monospace, monospace';
+        ctx.font = `${Math.round(13 * scale)}px ui-monospace, monospace`;
         ctx.textAlign = 'center';
-        const labelY = isBottom ? loopCy + loopR + 12 : loopCy - loopR - 5;
-        ctx.fillText(matrix[i][i].toFixed(1), x, labelY);
+        const loopKey = STATE_LABELS[i] + '->' + STATE_LABELS[i];
+        const loopNudge = LABEL_NUDGE[loopKey] || [0, 0];
+        const labelY = isBottom ? loopCy + loopR + 14 * scale : loopCy - loopR - 6 * scale;
+        ctx.fillText(matrix[i][i].toFixed(1), x + loopNudge[0] * scale, labelY + loopNudge[1] * scale);
       }
 
       // Draw nodes
@@ -2063,7 +2095,7 @@ export default (Alpine: Alpine) => {
 
         const textAlpha = fillAlpha > 0.5 ? 1 : 0;
         ctx.fillStyle = textAlpha ? '#1a0c06' : COLORS[i];
-        ctx.font = 'italic 15px Georgia, serif';
+        ctx.font = `italic ${Math.round(15 * scale)}px Georgia, serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(STATE_LABELS[i], x, y);

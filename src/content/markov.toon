@@ -6,6 +6,6 @@ meta:
 options: null
 
 content:
-  heading: "Markov Chains"
+  heading: "Markov Property"
   eyebrow: Probability
-  subtitle: "Transition probabilities, steady-state convergence, and the Markov property"
+  subtitle: "Transition probabilities, steady-state convergence and the Markov property in an example discrete-time finite Markov chain"
