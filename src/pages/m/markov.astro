@@ -37,34 +37,32 @@ const jsonLD = {
         <div class="card-header">
           <div class="card-header-left">
             <p class="card-label">State diagram</p>
-            <div class="step-row">
-              <span class="step-label">step</span>
-              <span class="step-counter" x-text="stepsDisplay"></span>
+            <div class="card-meta">
+              <div class="step-row">
+                <span class="step-label">step</span>
+                <span class="step-counter" x-text="stepsDisplay"></span>
+              </div>
+              <div class="speed-stepper">
+                <span class="speed-label">speed</span>
+                <span class="speed-val" x-text="speedMsLabel"></span>
+                <div class="speed-arrows">
+                  <button class="speed-btn speed-up" x-on:click="speedUp()" aria-label="Faster"></button>
+                  <button class="speed-btn speed-down" x-on:click="speedDown()" aria-label="Slower"></button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="walk-controls">
-            <div class="speed-stepper">
-              <span class="speed-label">speed</span>
-              <span class="speed-val" x-text="speedMsLabel"></span>
-              <div class="speed-arrows">
-                <button class="speed-btn speed-up" x-on:click="speedUp()" aria-label="Faster"></button>
-                <button class="speed-btn speed-down" x-on:click="speedDown()" aria-label="Slower"></button>
-              </div>
-            </div>
             <button class="btn-action" x-on:click="running ? stop() : start()" x-text="running ? 'Pause' : 'Run'"></button>
             <button class="btn-action" x-on:click="reset()">Reset</button>
           </div>
         </div>
 
         <div class="diagram-row">
-          <canvas id="markov-diagram" class="diagram-canvas"></canvas>
+          <div class="canvas-clip">
+            <canvas id="markov-diagram" class="diagram-canvas"></canvas>
+          </div>
           <div class="steady-col">
-            <p class="card-label">Steady state <span class="pi-symbol">π</span></p>
-            <div class="steady-vals">
-              <template x-for="(s, i) in steadyState" x-bind:key="i">
-                <span class="steady-val" x-text="['i','j','k','l','m','n','o'][i] + ': ' + s.toFixed(3)"></span>
-              </template>
-            </div>
             <p class="card-label mini-hist-label">Time in state</p>
             <div class="mini-hist">
               <template x-for="(s, idx) in visits" x-bind:key="idx">
@@ -85,6 +83,12 @@ const jsonLD = {
                   <span>1</span>
                 </div>
               </div>
+            </div>
+            <p class="card-label steady-label">Steady state <span class="pi-symbol">π</span></p>
+            <div class="steady-vals">
+              <template x-for="(s, i) in steadyState" x-bind:key="i">
+                <span class="steady-val" x-text="['i','j','k','l','m','n','o'][i] + ': ' + s.toFixed(3)"></span>
+              </template>
             </div>
           </div>
         </div>
@@ -194,6 +198,12 @@ const jsonLD = {
 
   .card-header-left .card-label {
     margin-bottom: 0;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .step-row {
@@ -329,6 +339,10 @@ const jsonLD = {
     align-items: start;
   }
 
+  .canvas-clip {
+    overflow: visible;
+  }
+
   .diagram-canvas {
     display: block;
     width: 100%;
@@ -357,6 +371,10 @@ const jsonLD = {
 
   .mini-hist-label {
     margin-top: 1rem;
+  }
+
+  .steady-label {
+    margin-top: 2rem;
   }
 
   .mini-hist {
@@ -549,23 +567,29 @@ const jsonLD = {
       gap: 0 1.5rem;
     }
 
-    .steady-col .card-label {
-      grid-column: 1 / -1;
-    }
-
-    .steady-col .steady-vals {
-      grid-column: 1;
-    }
-
     .steady-col .mini-hist-label {
-      grid-column: 2;
-      grid-row: 2;
-      margin-top: 0;
+      grid-column: 1;
+      grid-row: 1;
     }
 
     .steady-col .mini-hist {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .steady-col .mini-bar-axis {
+      grid-column: 1;
+    }
+
+    .steady-col .steady-label {
       grid-column: 2;
-      grid-row: 3;
+      grid-row: 1;
+      margin-top: 0;
+    }
+
+    .steady-col .steady-vals {
+      grid-column: 2;
+      grid-row: 2;
     }
 
     .steady-col .mini-bar-axis {
@@ -590,44 +614,47 @@ const jsonLD = {
       gap: 0.5rem;
     }
 
-    .card-header-left {
-      flex-direction: row;
-      align-items: center;
-      gap: 0.75rem;
-      width: 100%;
+    .card-header {
+      flex-direction: column;
+      gap: 0.375rem;
     }
 
     .walk-controls {
       width: 100%;
-      justify-content: space-between;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .canvas-clip {
+      overflow: hidden;
+      height: 45vw;
     }
 
     .diagram-canvas {
       height: auto;
       aspect-ratio: 5 / 4;
+      margin-top: -6vw;
     }
 
     .steady-col {
       grid-template-columns: 1fr;
     }
 
+    .steady-col .mini-hist-label,
+    .steady-col .mini-hist,
+    .steady-col .mini-bar-axis,
+    .steady-col .steady-label,
     .steady-col .steady-vals {
       grid-column: 1;
+      grid-row: auto;
     }
 
     .steady-col .mini-hist-label {
-      grid-column: 1;
-      grid-row: auto;
+      margin-top: 0;
+    }
+
+    .steady-col .steady-label {
       margin-top: 0.75rem;
-    }
-
-    .steady-col .mini-hist {
-      grid-column: 1;
-      grid-row: auto;
-    }
-
-    .steady-col .mini-bar-axis {
-      grid-column: 1;
     }
 
     h1 {

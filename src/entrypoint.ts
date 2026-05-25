@@ -1845,12 +1845,12 @@ export default (Alpine: Alpine) => {
     const ADJ: boolean[][] = [
     // i     j     k     l     m     n     o
       [true, true, false,false,false,false,false], // i
-      [true, false,true, false,false,false,false], // j
+      [true, true, true, false,false,false,false], // j
       [false,true, true, true, false,false,false], // k
-      [false,false,true, false,true, true, false], // l
-      [false,false,false,true, false,false,true ], // m
-      [false,false,false,true, false,false,true ], // n
-      [false,false,false,false,true, true, false], // o
+      [false,false,true, true, true, true, false], // l
+      [false,false,false,true, true, false,true ], // m
+      [false,false,false,true, false,true, true ], // n
+      [false,false,false,false,true, true, true ], // o
     ];
 
     function defaultMatrix(): number[][] {
@@ -1888,21 +1888,26 @@ export default (Alpine: Alpine) => {
     // Per-edge label offsets: [dx, dy] in scaled pixels, added after default placement
     // Key format: "i->j" using state letters. Tweak these to fix overlapping labels.
     const LABEL_NUDGE: Record<string, [number, number]> = {
-      'i->i': [0, 0],   // self-loop
+      'i->i': [0, 0],    // self-loop
       'i->j': [15, 5],
+      'j->j': [0, 0],    // self-loop
       'j->i': [0, 0],
       'j->k': [0, 0],
       'k->j': [0, 0],
-      'k->k': [0, 0],   // self-loop
+      'k->k': [0, 0],    // self-loop
       'k->l': [25, 0],
-      'l->k': [5, -5],  // push down-left, away from k->l label
-      'l->m': [0, 0],
+      'l->k': [5, -5],
+      'l->l': [0, 0],    // self-loop
+      'l->m': [10, 0],
       'l->n': [0, 0],
       'n->l': [-5, 50],
       'l->o': [0, 0],
-      'o->n': [0, 0],
+      'm->m': [0, 0],    // self-loop
+      'm->o': [8, 0],
+      'n->n': [0, 0],    // self-loop
       'n->o': [25, 10],
-      'm->o': [8, 0],    // push right, away from line
+      'o->n': [0, 0],
+      'o->o': [0, 0],    // self-loop
     };
 
     function drawDiagram(matrix: number[][], current: number, visits: number[]) {
