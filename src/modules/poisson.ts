@@ -1,6 +1,7 @@
 // poisson page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
+import { waitForCanvas, initHDPI } from './shared/canvas';
 
 export default function (Alpine: Alpine) {
   Alpine.data('poissonProcess', () => {
@@ -168,21 +169,11 @@ export default function (Alpine: Alpine) {
 
       init() {
         const self = this;
-        const tryInit = () => {
-          timelineCanvas = document.getElementById('poisson-timeline') as HTMLCanvasElement | null;
-          if (!timelineCanvas || timelineCanvas.getBoundingClientRect().width === 0) {
-            requestAnimationFrame(tryInit);
-            return;
-          }
-          const dpr = window.devicePixelRatio || 1;
-          const rect = timelineCanvas.getBoundingClientRect();
-          timelineCanvas.width = rect.width * dpr;
-          timelineCanvas.height = rect.height * dpr;
-          timelineCtx = timelineCanvas.getContext('2d');
-          if (timelineCtx) timelineCtx.scale(dpr, dpr);
+        waitForCanvas('poisson-timeline', (canvas) => {
+          timelineCanvas = canvas;
+          timelineCtx = initHDPI(canvas);
           self.simulate();
-        };
-        requestAnimationFrame(tryInit);
+        });
       },
 
       simulate() {

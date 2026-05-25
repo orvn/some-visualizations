@@ -1,5 +1,7 @@
 // confidence page
 import type { Alpine } from 'alpinejs';
+import { waitForCanvas, initHDPI } from './shared/canvas';
+import { boxMuller } from './shared/stats';
 
 export default function (Alpine: Alpine) {
   Alpine.data('confidenceViz', () => {
@@ -17,12 +19,6 @@ export default function (Alpine: Alpine) {
       return p < 0.5 ? -z : z;
     }
 
-    function boxMuller(): number {
-      const u1 = Math.random();
-      const u2 = Math.random();
-      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    }
-
     function runExperiments(n: number, confidence: number, trueMu: number) {
       const alpha = 1 - confidence;
       const z = zQuantile(1 - alpha / 2);
@@ -31,7 +27,7 @@ export default function (Alpine: Alpine) {
       for (let i = 0; i < NUM_EXPERIMENTS; i++) {
         let sum = 0;
         for (let j = 0; j < n; j++) {
-          sum += trueMu + TRUE_SIGMA * boxMuller();
+          sum += trueMu + TRUE_SIGMA * boxMuller()[0];
         }
         const mean = sum / n;
         const margin = z * TRUE_SIGMA / Math.sqrt(n);
@@ -146,21 +142,11 @@ export default function (Alpine: Alpine) {
 
       init() {
         const self = this;
-        const tryInit = () => {
-          ciCanvas = document.getElementById('ci-chart') as HTMLCanvasElement | null;
-          if (!ciCanvas || ciCanvas.getBoundingClientRect().width === 0) {
-            requestAnimationFrame(tryInit);
-            return;
-          }
-          const dpr = window.devicePixelRatio || 1;
-          const rect = ciCanvas.getBoundingClientRect();
-          ciCanvas.width = rect.width * dpr;
-          ciCanvas.height = rect.height * dpr;
-          ciCtx = ciCanvas.getContext('2d');
-          if (ciCtx) ciCtx.scale(dpr, dpr);
+        waitForCanvas('ci-chart', (canvas) => {
+          ciCanvas = canvas;
+          ciCtx = initHDPI(canvas);
           self.simulate();
-        };
-        requestAnimationFrame(tryInit);
+        });
       },
 
       simulate() {

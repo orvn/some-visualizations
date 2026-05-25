@@ -2,33 +2,8 @@
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
 import { makeScriptableGrad } from './shared/chart';
-
-function createStripePattern(color: string, bgColor: string = 'transparent'): CanvasPattern | string {
-  const size = 8;
-  const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
-  const ctx = c.getContext('2d');
-  if (!ctx) return color;
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, size);
-  ctx.lineTo(size, 0);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-size / 2, size / 2);
-  ctx.lineTo(size / 2, -size / 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(size / 2, size + size / 2);
-  ctx.lineTo(size + size / 2, size / 2);
-  ctx.stroke();
-  const pattern = ctx.createPattern(c, 'repeat');
-  return pattern || color;
-}
+import { initHDPI, createStripePattern } from './shared/canvas';
+import { normalPdf, boxMuller } from './shared/stats';
 
 export default (Alpine: Alpine) => {
   // Random Variables reference
@@ -59,9 +34,7 @@ export default (Alpine: Alpine) => {
       const t = z + g + 0.5;
       return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
     }
-    function normalPdfRV(x: number, mu: number, sigma: number): number {
-      return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
-    }
+
 
     const dists: Record<string, RVDef> = {
       // DISCRETE
@@ -157,7 +130,7 @@ export default (Alpine: Alpine) => {
       },
       normal: { name: 'Normal', type: 'continuous',
         params: [{ key: 'mu', label: 'μ', min: -5, max: 5, step: 0.1, default: 0 }, { key: 'sigma', label: 'σ', min: 0.1, max: 4, step: 0.1, default: 1 }],
-        pdf: (x, p) => normalPdfRV(x, p.mu, p.sigma),
+        pdf: (x, p) => normalPdf(x, p.mu, p.sigma),
         range: (p) => [p.mu - 4 * p.sigma, p.mu + 4 * p.sigma],
         mean: (p) => `${p.mu.toFixed(2)}`, variance: (p) => `${(Math.pow(p.sigma, 2)).toFixed(4)}`,
         formula: 'f(x) = (1/σ√2π) exp(−(x−μ)²/2σ²)\n𝔼[X] = μ\n𝕍(X) = σ²',
@@ -271,13 +244,9 @@ export default (Alpine: Alpine) => {
       if (polarAnimId) { cancelAnimationFrame(polarAnimId); polarAnimId = null; }
       const canvas = document.getElementById('rv-polar') as HTMLCanvasElement | null;
       if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      const ctx = canvas.getContext('2d');
+      const ctx = initHDPI(canvas);
       if (!ctx) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const rect = canvas.getBoundingClientRect();
       const W = rect.width;
       const H = rect.height;
       ctx.clearRect(0, 0, W, H);
@@ -290,9 +259,9 @@ export default (Alpine: Alpine) => {
         const sigma = paramVals.sigma || 1;
         const points: [number, number][] = [];
         for (let i = 0; i < 400; i++) {
-          const u1 = Math.random(), u2 = Math.random();
-          const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * sigma;
-          const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2) * sigma;
+          const [b1, b2] = boxMuller();
+          const z1 = b1 * sigma;
+          const z2 = b2 * sigma;
           points.push([z1, z2]);
         }
         const scale = maxR / (4 * sigma);

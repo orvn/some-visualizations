@@ -2,33 +2,8 @@
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
 import { makeScriptableGrad } from './shared/chart';
-
-function createStripePattern(color: string, bgColor: string = 'transparent'): CanvasPattern | string {
-  const size = 8;
-  const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
-  const ctx = c.getContext('2d');
-  if (!ctx) return color;
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, size);
-  ctx.lineTo(size, 0);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-size / 2, size / 2);
-  ctx.lineTo(size / 2, -size / 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(size / 2, size + size / 2);
-  ctx.lineTo(size + size / 2, size / 2);
-  ctx.stroke();
-  const pattern = ctx.createPattern(c, 'repeat');
-  return pattern || color;
-}
+import { createStripePattern } from './shared/canvas';
+import { normalPdf, normalCdf } from './shared/stats';
 
 export default function (Alpine: Alpine) {
   Alpine.data('normalBinomial', () => {
@@ -45,17 +20,7 @@ export default function (Alpine: Alpine) {
       return Math.exp(logBinom(n, k) + k * Math.log(p) + (n - k) * Math.log(1 - p));
     }
 
-    function normalPdfLocal(x: number, mu: number, sigma: number): number {
-      return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
-    }
 
-    function normalCdf(x: number, mu: number, sigma: number): number {
-      const z = (x - mu) / sigma;
-      const t = 1 / (1 + 0.2316419 * Math.abs(z));
-      const d = 0.3989422804014327;
-      const p = d * Math.exp(-z * z / 2) * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.8212560 + t * 1.3302744))));
-      return z > 0 ? 1 - p : p;
-    }
 
     return {
       n: '10',
@@ -125,7 +90,7 @@ export default function (Alpine: Alpine) {
           if (useCC) {
             normalApprox.push(normalCdf(k + 0.5, mu, sigma) - normalCdf(k - 0.5, mu, sigma));
           } else {
-            normalApprox.push(normalPdfLocal(k, mu, sigma));
+            normalApprox.push(normalPdf(k, mu, sigma));
           }
         }
 
@@ -133,7 +98,7 @@ export default function (Alpine: Alpine) {
         const xMin = Math.max(0, mu - 4 * sigma);
         const xMax = Math.min(n, mu + 4 * sigma);
         for (let x = xMin; x <= xMax; x += (xMax - xMin) / 200) {
-          normCurve.push({ x, y: normalPdfLocal(x, mu, sigma) });
+          normCurve.push({ x, y: normalPdf(x, mu, sigma) });
         }
 
         let totalErr = 0;

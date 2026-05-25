@@ -1,6 +1,7 @@
 // covariance page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
+import { boxMuller } from './shared/stats';
 
 export default function (Alpine: Alpine) {
   Alpine.data('correlationViz', () => {
@@ -10,11 +11,7 @@ export default function (Alpine: Alpine) {
     function generateBivariateNormal(rho: number): { x: number; y: number }[] {
       const points: { x: number; y: number }[] = [];
       for (let i = 0; i < N_POINTS; i++) {
-        // Box-Muller
-        const u1 = Math.random();
-        const u2 = Math.random();
-        const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-        const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
+        const [z1, z2] = boxMuller();
         const x = z1;
         const y = rho * z1 + Math.sqrt(1 - rho * rho) * z2;
         points.push({ x, y });

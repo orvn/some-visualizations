@@ -1,6 +1,7 @@
 // markov page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
+import { waitForCanvas, initHDPI } from './shared/canvas';
 
 export default function (Alpine: Alpine) {
   Alpine.data('markovChain', () => {
@@ -361,22 +362,12 @@ export default function (Alpine: Alpine) {
 
       init() {
         const self = this;
-        const tryInit = () => {
-          diagramCanvas = document.getElementById('markov-diagram') as HTMLCanvasElement | null;
-          if (!diagramCanvas || diagramCanvas.getBoundingClientRect().width === 0) {
-            requestAnimationFrame(tryInit);
-            return;
-          }
-          const dpr = window.devicePixelRatio || 1;
-          const rect = diagramCanvas.getBoundingClientRect();
-          diagramCanvas.width = rect.width * dpr;
-          diagramCanvas.height = rect.height * dpr;
-          diagramCtx = diagramCanvas.getContext('2d');
-          if (diagramCtx) diagramCtx.scale(dpr, dpr);
+        waitForCanvas('markov-diagram', (canvas) => {
+          diagramCanvas = canvas;
+          diagramCtx = initHDPI(canvas);
           self.recalc();
           self.draw();
-        };
-        requestAnimationFrame(tryInit);
+        });
       },
 
       recalc() {

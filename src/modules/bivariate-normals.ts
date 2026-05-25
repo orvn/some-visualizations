@@ -2,6 +2,7 @@
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
 import { makeScriptableGrad } from './shared/chart';
+import { waitForCanvas, initHDPI } from './shared/canvas';
 
 export default function (Alpine: Alpine) {
   Alpine.data('bivariateNormals', () => {
@@ -411,28 +412,17 @@ export default function (Alpine: Alpine) {
 
       init() {
         const self = this;
-        const tryInit = () => {
-          surfaceCanvas = document.getElementById('bn-surface') as HTMLCanvasElement | null;
+        waitForCanvas('bn-surface', (canvas) => {
+          surfaceCanvas = canvas;
           heatCanvas = document.getElementById('bn-heatmap') as HTMLCanvasElement | null;
-          if (!surfaceCanvas || surfaceCanvas.getBoundingClientRect().width === 0) {
-            requestAnimationFrame(tryInit);
-            return;
-          }
           [surfaceCanvas, heatCanvas].forEach(c => {
-            if (!c) return;
-            const dpr = window.devicePixelRatio || 1;
-            const rect = c.getBoundingClientRect();
-            c.width = rect.width * dpr;
-            c.height = rect.height * dpr;
-            const ctx = c.getContext('2d');
-            if (ctx) ctx.scale(dpr, dpr);
+            if (c) initHDPI(c);
           });
           surfaceCtx = surfaceCanvas.getContext('2d');
           heatCtx = heatCanvas?.getContext('2d') || null;
           self._current = { sx: 1, sy: 1, rho: 0, sliceY: 0 };
           self.render();
-        };
-        requestAnimationFrame(tryInit);
+        });
       },
 
       render() {
