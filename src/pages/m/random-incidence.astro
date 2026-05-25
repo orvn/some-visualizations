@@ -54,7 +54,7 @@ const jsonLD = {
         <div class="stats-row">
           <span class="stat" x-text="'true avg gap: ' + trueAvg + 's'"></span>
           <span class="stat observed" x-text="'observed avg: ' + obsAvg + 's'"></span>
-          <button class="btn-resample" x-on:click="simulate()">Resample</button>
+          <button class="button-viz" x-on:click="simulate()">Resample</button>
         </div>
       </div>
 
@@ -79,65 +79,12 @@ const jsonLD = {
 </BaseLayout>
 
 <style>
-  .viz-wrap {
-    padding-block: 2rem 4rem;
-  }
-
-  .viz-container {
-    max-width: 54rem;
-    margin-inline: auto;
-    padding-inline: var(--container-padding);
-  }
-
-  .eyebrow {
-    text-align: center;
-    font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-widest);
-    text-transform: uppercase;
-    color: var(--potters-clay);
-    margin-bottom: 0.5rem;
-  }
-
-  h1 {
-    text-align: center;
-    font-size: var(--text-3xl);
-    font-weight: normal;
-    letter-spacing: var(--tracking-tight);
-    margin-bottom: 0.5rem;
-    color: var(--parchment);
-  }
-
-  .subtitle {
-    text-align: center;
-    color: var(--teak);
-    font-size: var(--text-sm);
-    margin-bottom: 1.75rem;
-  }
-
-  .card {
-    background: var(--crow);
-    border: 0.0625rem solid var(--bronze);
-    border-radius: 0.75rem;
-    padding: 1.25rem 1.25rem 0.875rem;
-    margin-bottom: 1.25rem;
-  }
-
   .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.875rem;
     flex-wrap: wrap;
     gap: 0.75rem;
   }
 
   .card-label {
-    font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--potters-clay);
     margin-bottom: 0.5rem;
   }
 
@@ -151,11 +98,6 @@ const jsonLD = {
     display: block;
     width: 100%;
     height: 5.5rem;
-  }
-
-  canvas {
-    display: block;
-    width: 100% !important;
   }
 
   .stats-row {
@@ -176,39 +118,7 @@ const jsonLD = {
     color: var(--sienna);
   }
 
-  .btn-resample {
+  .button-viz {
     margin-left: auto;
-    padding: 0.375rem 1rem;
-    background: var(--bronze);
-    border: 0.0625rem solid var(--potters-clay);
-    border-radius: 0.375rem;
-    color: var(--parchment);
-    font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: background-color var(--transition-fast);
-  }
-
-  .btn-resample:hover {
-    background: var(--potters-clay);
-  }
-
-  .insight {
-    border-top: 0.0625rem solid var(--bronze);
-    padding-top: 1.25rem;
-  }
-
-  .insight ul {
-    color: var(--teak);
-    font-size: var(--text-sm);
-    line-height: 1.9;
-    padding-left: 1.125rem;
-  }
-
-  .insight li strong {
-    color: var(--parchment);
-    font-weight: normal;
   }
 </style>
