@@ -1,0 +1,690 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('markov');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/m/markov',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="markovChain">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <p class="card-label">State diagram</p>
+            <div class="card-meta">
+              <div class="step-row">
+                <span class="step-label">step</span>
+                <span class="step-counter" x-text="stepsDisplay"></span>
+              </div>
+              <div class="speed-stepper">
+                <span class="speed-label">speed</span>
+                <span class="speed-val" x-text="speedMsLabel"></span>
+                <div class="speed-arrows">
+                  <button class="speed-btn speed-up" x-on:click="speedUp()" aria-label="Faster"></button>
+                  <button class="speed-btn speed-down" x-on:click="speedDown()" aria-label="Slower"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="walk-controls">
+            <button class="btn-action" x-on:click="running ? stop() : start()" x-text="running ? 'Pause' : 'Run'"></button>
+            <button class="btn-action" x-on:click="reset()">Reset</button>
+          </div>
+        </div>
+
+        <div class="diagram-row">
+          <div class="canvas-clip">
+            <canvas id="markov-diagram" class="diagram-canvas"></canvas>
+          </div>
+          <div class="steady-col">
+            <p class="card-label mini-hist-label">Time in state</p>
+            <div class="mini-hist">
+              <template x-for="(s, idx) in visits" x-bind:key="idx">
+                <div class="mini-bar-row">
+                  <span class="mini-bar-label" x-text="['i','j','k','l','m','n','o'][idx]"></span>
+                  <div class="mini-bar-track">
+                    <div class="mini-bar-fill" x-bind:style="'width:' + (totalSteps > 0 ? (s / totalSteps * 100) : 0) + '%; background:' + ['#f0d8a8','#90b878','#f07858','#e8a050','#b89470','#f0d8a8','#90b878'][idx]"></div>
+                  </div>
+                </div>
+              </template>
+              <div class="mini-bar-axis">
+                <span class="mini-bar-label"></span>
+                <div class="mini-bar-ticks">
+                  <span>0</span>
+                  <span>.25</span>
+                  <span>.5</span>
+                  <span>.75</span>
+                  <span>1</span>
+                </div>
+              </div>
+            </div>
+            <p class="card-label steady-label">Steady state <span class="pi-symbol">π</span></p>
+            <div class="steady-vals">
+              <template x-for="(s, i) in steadyState" x-bind:key="i">
+                <span class="steady-val" x-text="['i','j','k','l','m','n','o'][i] + ': ' + s.toFixed(3)"></span>
+              </template>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="card">
+        <p class="card-label">Adjust transition probabilities</p>
+        <div class="matrix-cards">
+          <template x-for="(row, i) in matrix" x-bind:key="i">
+            <div class="matrix-card">
+              <span class="matrix-from" x-text="['i','j','k','l','m','n','o'][i]"></span>
+              <div class="matrix-sliders">
+                <template x-for="(val, j) in row" x-bind:key="j">
+                  <template x-if="adj[i][j]">
+                    <div class="matrix-slider">
+                      <span class="matrix-to" x-text="'→ ' + ['i','j','k','l','m','n','o'][j]"></span>
+                      <input type="range" min="0" max="1" step="0.05"
+                             x-bind:value="val"
+                             x-on:input="setTransition(i, j, $event.target.value)" />
+                      <span class="matrix-val" x-text="val.toFixed(2)"></span>
+                    </div>
+                  </template>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+        <p class="matrix-footnote">* Setting a transition probability to 0 removes that edge from the state model</p>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key ideas</p>
+        <ul>
+          <li><strong>Markov property:</strong> the next state depends only on the current state, not the path taken to get here.</li>
+          <li><strong>Steady state πⱼ:</strong> as the walk runs, the fraction of time in each state converges to πⱼ, regardless of the starting state.</li>
+          <li><strong>Balance equations:</strong> πⱼ = Σₖ πₖ·pₖⱼ. The flow into each state equals the flow out.</li>
+          <li><strong>Convergence requires</strong> an irreducible (single recurrent class) and aperiodic chain.</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .viz-wrap {
+    padding-block: 2rem 4rem;
+  }
+
+  .viz-container {
+    max-width: 54rem;
+    margin-inline: auto;
+    padding-inline: var(--container-padding);
+  }
+
+  .eyebrow {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: var(--text-3xl);
+    font-weight: normal;
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: 0.5rem;
+    color: var(--parchment);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--teak);
+    font-size: var(--text-sm);
+    margin-bottom: 1.75rem;
+  }
+
+  .card {
+    background: var(--crow);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.25rem 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .card-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .card-header-left .card-label {
+    margin-bottom: 0;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .step-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .card-label {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  .walk-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: center;
+  }
+
+  .step-counter {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--colonial);
+    min-width: 3rem;
+    text-align: center;
+    padding: 0.0625rem 0.375rem;
+    background: var(--graphite);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.2rem;
+    letter-spacing: 0.05em;
+  }
+
+  .step-label {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    color: var(--potters-clay);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .speed-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-right: 0.75rem;
+    align-self: center;
+  }
+
+  .speed-label {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    color: var(--potters-clay);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .speed-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--colonial);
+    min-width: 2.25rem;
+    text-align: right;
+  }
+
+  .speed-arrows {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+  }
+
+  .speed-btn {
+    display: block;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.125rem 0.375rem;
+    line-height: 0;
+    font-size: 0;
+  }
+
+  .speed-btn::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 0.3125rem solid transparent;
+    border-right: 0.3125rem solid transparent;
+    transition: border-color var(--transition-fast);
+  }
+
+  .speed-up::after {
+    border-bottom: 0.3125rem solid var(--potters-clay);
+  }
+
+  .speed-up:hover::after {
+    border-bottom-color: var(--parchment);
+  }
+
+  .speed-down::after {
+    border-top: 0.3125rem solid var(--potters-clay);
+  }
+
+  .speed-down:hover::after {
+    border-top-color: var(--parchment);
+  }
+
+  .btn-action {
+    padding: 0.25rem 0.75rem;
+    background: var(--bronze);
+    border: 0.0625rem solid var(--potters-clay);
+    border-radius: 0.25rem;
+    color: var(--parchment);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+  }
+
+  .btn-action:hover { background: var(--potters-clay); }
+  .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .diagram-row {
+    display: grid;
+    grid-template-columns: 1fr 18rem;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .canvas-clip {
+    overflow: visible;
+  }
+
+  .diagram-canvas {
+    display: block;
+    width: 100%;
+    height: 22rem;
+  }
+
+  .steady-col {
+    padding-top: 0.25rem;
+  }
+
+  .pi-symbol {
+    text-transform: lowercase;
+  }
+
+  .steady-vals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.125rem 0.5rem;
+  }
+
+  .steady-vals :global(.steady-val) {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--colonial);
+  }
+
+  .mini-hist-label {
+    margin-top: 1rem;
+  }
+
+  .steady-label {
+    margin-top: 2rem;
+  }
+
+  .mini-hist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .mini-hist :global(.mini-bar-row) {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .mini-hist :global(.mini-bar-label) {
+    font: italic 0.8125rem Georgia, serif;
+    color: var(--potters-clay);
+    min-width: 0.75rem;
+    text-align: right;
+  }
+
+  .mini-hist :global(.mini-bar-track) {
+    flex: 1;
+    height: 0.25rem;
+    background: var(--bronze);
+    border-radius: 0.125rem;
+    overflow: hidden;
+  }
+
+  .mini-hist :global(.mini-bar-fill) {
+    height: 100%;
+    border-radius: 0.125rem;
+    transition: width 150ms ease;
+  }
+
+  .mini-bar-axis {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.125rem;
+  }
+
+  .mini-bar-ticks {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    color: var(--potters-clay);
+    opacity: 0.6;
+  }
+
+  canvas {
+    display: block;
+    width: 100% !important;
+  }
+
+  .matrix-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .matrix-cards :global(.matrix-card) {
+    flex: 0 0 calc(33.333% - 0.5rem);
+    background: var(--graphite);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.625rem;
+    min-width: 0;
+  }
+
+  @media (max-width: 48em) {
+    .matrix-cards :global(.matrix-card) {
+      flex: 0 0 calc(50% - 0.375rem);
+    }
+  }
+
+  @media (max-width: 30em) {
+    .matrix-cards :global(.matrix-card) {
+      flex: 0 0 100%;
+    }
+  }
+
+  .matrix-cards :global(.matrix-from) {
+    font: italic 0.8rem Georgia, serif;
+    color: var(--colonial);
+    display: inline-block;
+    border: 0.5px solid var(--colonial);
+    padding: 0.325rem 0.625rem;
+    border-radius: 5rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .matrix-cards :global(.matrix-sliders) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .matrix-cards :global(.matrix-slider) {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  .matrix-cards :global(.matrix-to) {
+    font: italic 0.6875rem Georgia, serif;
+    color: var(--potters-clay);
+    min-width: 1.25rem;
+  }
+
+  .matrix-cards :global(.matrix-val) {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--colonial);
+    min-width: 1.5rem;
+    text-align: right;
+  }
+
+  .matrix-footnote {
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    color: var(--potters-clay);
+    margin-top: 0.75rem;
+  }
+
+  .matrix-cards :global(input[type=range]) {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    height: 0.1875rem;
+    background: transparent;
+    padding: 0.375rem 0;
+    margin: 0;
+  }
+
+  .matrix-cards :global(input[type=range]::-webkit-slider-runnable-track) {
+    height: 0.1875rem;
+    background: var(--bronze);
+    border-radius: 0.0625rem;
+  }
+
+  .matrix-cards :global(input[type=range]::-moz-range-track) {
+    height: 0.1875rem;
+    background: var(--bronze);
+    border-radius: 0.0625rem;
+    border: none;
+  }
+
+  .matrix-cards :global(input[type=range]::-webkit-slider-thumb) {
+    -webkit-appearance: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    margin-top: -0.21875rem;
+    cursor: pointer;
+  }
+
+  .matrix-cards :global(input[type=range]::-moz-range-thumb) {
+    width: 0.625rem;
+    height: 0.625rem;
+    background: var(--colonial);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* ---- Tablet ---- */
+
+  @media (max-width: 52em) {
+    .diagram-row {
+      grid-template-columns: 1fr;
+    }
+
+    .diagram-canvas {
+      height: 20rem;
+    }
+
+    .steady-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 1.5rem;
+    }
+
+    .steady-col .mini-hist-label {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .steady-col .mini-hist {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .steady-col .mini-bar-axis {
+      grid-column: 1;
+    }
+
+    .steady-col .steady-label {
+      grid-column: 2;
+      grid-row: 1;
+      margin-top: 0;
+    }
+
+    .steady-col .steady-vals {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    .steady-col .mini-bar-axis {
+      grid-column: 2;
+    }
+  }
+
+  /* ---- Mobile ---- */
+
+  @media (max-width: 40em) {
+    .viz-wrap {
+      padding-block: 1rem 2rem;
+    }
+
+    .card {
+      padding: 0.75rem 0.75rem 0.625rem;
+      border-radius: 0.5rem;
+    }
+
+    .card-header {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .card-header {
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .walk-controls {
+      width: 100%;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .canvas-clip {
+      overflow: hidden;
+      height: 45vw;
+    }
+
+    .diagram-canvas {
+      height: auto;
+      aspect-ratio: 5 / 4;
+      margin-top: -6vw;
+    }
+
+    .steady-col {
+      grid-template-columns: 1fr;
+    }
+
+    .steady-col .mini-hist-label,
+    .steady-col .mini-hist,
+    .steady-col .mini-bar-axis,
+    .steady-col .steady-label,
+    .steady-col .steady-vals {
+      grid-column: 1;
+      grid-row: auto;
+    }
+
+    .steady-col .mini-hist-label {
+      margin-top: 0;
+    }
+
+    .steady-col .steady-label {
+      margin-top: 0.75rem;
+    }
+
+    h1 {
+      font-size: var(--text-2xl);
+    }
+
+    .subtitle {
+      font-size: var(--text-xs);
+      margin-bottom: 1rem;
+    }
+
+    .speed-stepper {
+      margin-right: 0.25rem;
+    }
+  }
+
+  .insight {
+    border-top: 0.0625rem solid var(--bronze);
+    padding-top: 1.25rem;
+  }
+
+  .insight ul {
+    color: var(--teak);
+    font-size: var(--text-sm);
+    line-height: 1.9;
+    padding-left: 1.125rem;
+  }
+
+  .insight li strong {
+    color: var(--parchment);
+    font-weight: normal;
+  }
+</style>
