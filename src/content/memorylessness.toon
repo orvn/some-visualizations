@@ -1,0 +1,11 @@
+meta:
+  title: "Memorylessness"
+  description: The exponential distribution forgets the past. Select any wait time and see that the remaining distribution is always identical.
+  og_image: /og-image.png
+
+options: null
+
+content:
+  heading: "Memorylessness"
+  eyebrow: "Exponential Distribution"
+  subtitle: "ℙ(X > s + t | X > s) = ℙ(X > t) — the past tells you nothing about the future"
