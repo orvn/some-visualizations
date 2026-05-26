@@ -86,74 +86,6 @@ const jsonLD = {
 </BaseLayout>
 
 <style>
-  .viz-wrap {
-    padding-block: 2rem 4rem;
-  }
-
-  .viz-container {
-    max-width: 54rem;
-    margin-inline: auto;
-    padding-inline: var(--container-padding);
-  }
-
-  .eyebrow {
-    text-align: center;
-    font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-widest);
-    text-transform: uppercase;
-    color: var(--potters-clay);
-    margin-bottom: 0.5rem;
-  }
-
-  h1 {
-    text-align: center;
-    font-size: var(--text-3xl);
-    font-weight: normal;
-    letter-spacing: var(--tracking-tight);
-    margin-bottom: 0.5rem;
-    color: var(--parchment);
-  }
-
-  .subtitle {
-    text-align: center;
-    color: var(--teak);
-    font-size: var(--text-sm);
-    margin-bottom: 1.75rem;
-  }
-
-  .subtitle em {
-    font-style: italic;
-  }
-
-  .card {
-    background: var(--crow);
-    border: 0.0625rem solid var(--bronze);
-    border-radius: 0.75rem;
-    padding: 1.25rem 1.25rem 0.875rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.875rem;
-  }
-
-  .card-label {
-    font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--potters-clay);
-  }
-
-  canvas {
-    display: block;
-    width: 100% !important;
-  }
-
   .controls-wrap {
     display: grid;
     grid-template-rows: 0fr;
@@ -171,63 +103,8 @@ const jsonLD = {
     overflow: hidden;
   }
 
-  .slider-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 0.875rem;
-  }
-
   .slider-val {
-    font-family: var(--font-mono);
-    font-size: var(--text-base);
-    font-weight: bold;
-    color: var(--colonial);
     min-width: 6.25rem;
-  }
-
-  input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    flex: 1;
-    cursor: pointer;
-    height: 0.5rem;
-    background: transparent;
-    padding: 0.75rem 0;
-    margin: 0;
-  }
-
-  input[type=range]::-webkit-slider-runnable-track {
-    height: 0.5rem;
-    background: var(--bronze);
-    border-radius: 0.25rem;
-  }
-
-  input[type=range]::-moz-range-track {
-    height: 0.5rem;
-    background: var(--bronze);
-    border-radius: 0.25rem;
-    border: none;
-  }
-
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 1.5rem;
-    height: 1.5rem;
-    background: var(--colonial);
-    border-radius: 50%;
-    border: none;
-    margin-top: -0.5rem;
-    cursor: pointer;
-  }
-
-  input[type=range]::-moz-range-thumb {
-    width: 1.5rem;
-    height: 1.5rem;
-    background: var(--colonial);
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
   }
 
   .slider-sigma {
@@ -252,22 +129,5 @@ const jsonLD = {
   .stat-line em {
     color: var(--colonial);
     font-style: normal;
-  }
-
-  .insight {
-    border-top: 0.0625rem solid var(--bronze);
-    padding-top: 1.25rem;
-  }
-
-  .insight ul {
-    color: var(--teak);
-    font-size: var(--text-sm);
-    line-height: 1.9;
-    padding-left: 1.125rem;
-  }
-
-  .insight li strong {
-    color: var(--parchment);
-    font-weight: normal;
   }
 </style>
