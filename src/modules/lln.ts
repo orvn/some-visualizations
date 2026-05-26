@@ -99,7 +99,7 @@ export default function (Alpine: Alpine) {
           type: 'line',
           data: { labels: xLabels, datasets },
           options: {
-            animation: false,
+            animation: { duration: 300, easing: 'easeOutQuart' as const },
             responsive: true,
             maintainAspectRatio: true,
             aspectRatio: window.innerWidth < 480 ? 0.75 : 2.4,
@@ -152,7 +152,7 @@ export default function (Alpine: Alpine) {
           type: 'line',
           data: { labels: xLabels, datasets: decayDatasets },
           options: {
-            animation: false,
+            animation: { duration: 300, easing: 'easeOutQuart' as const },
             responsive: true,
             maintainAspectRatio: true,
             aspectRatio: 2.8,
