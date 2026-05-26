@@ -1,13 +1,11 @@
 // markov page
 import type { Alpine } from 'alpinejs';
-import { Chart } from 'chart.js';
 import { waitForCanvas, initHDPI } from './shared/canvas';
 
 export default function (Alpine: Alpine) {
   Alpine.data('markovChain', () => {
     let diagramCanvas: HTMLCanvasElement | null = null;
     let diagramCtx: CanvasRenderingContext2D | null = null;
-    let histChart: Chart | null = null;
     let walkTimer: ReturnType<typeof setTimeout> | null = null;
     let pulseScale = 1;
     let pulseT = 1;
@@ -105,9 +103,9 @@ export default function (Alpine: Alpine) {
       // Draw edges
       for (let i = 0; i < STATES; i++) {
         for (let j = 0; j < STATES; j++) {
-          if (i === j || matrix[i][j] < 0.01) continue;
-          const [x1, y1] = pos[i];
-          const [x2, y2] = pos[j];
+          if (i === j || matrix[i]![j]! < 0.01) continue;
+          const [x1, y1] = pos[i]!;
+          const [x2, y2] = pos[j]!;
           const dx = x2 - x1;
           const dy = y2 - y1;
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -116,12 +114,12 @@ export default function (Alpine: Alpine) {
 
           // Perpendicular offset: use canonical direction (lower→higher index) so
           // bidirectional pairs consistently separate instead of both curving the same way
-          const hasBoth = matrix[j][i] > 0.01;
+          const hasBoth = matrix[j]![i]! > 0.01;
           const curveAmt = (hasBoth ? 8 : 5) * scale;
           const lowIdx = Math.min(i, j);
           const highIdx = Math.max(i, j);
-          const [lx, ly] = pos[lowIdx];
-          const [hx, hy] = pos[highIdx];
+          const [lx, ly] = pos[lowIdx]!;
+          const [hx, hy] = pos[highIdx]!;
           const refDx = hx - lx;
           const refDy = hy - ly;
           const refDist = Math.sqrt(refDx * refDx + refDy * refDy);
@@ -172,26 +170,26 @@ export default function (Alpine: Alpine) {
           ctx.fill();
 
           // Probability label along the curve
-          if (matrix[i][j] >= 0.05) {
+          if (matrix[i]![j]! >= 0.05) {
             const lt = hasBoth ? (i < j ? 0.3 : 0.7) : 0.5;
             const lx = (1-lt)*(1-lt)*sx + 2*(1-lt)*lt*cpx + lt*lt*ex;
             const ly = (1-lt)*(1-lt)*sy + 2*(1-lt)*lt*cpy + lt*lt*ey;
-            const edgeKey = STATE_LABELS[i] + '->' + STATE_LABELS[j];
+            const edgeKey = STATE_LABELS[i]! + '->' + STATE_LABELS[j]!;
             const nudge = LABEL_NUDGE[edgeKey] || [0, 0];
             const mx = lx + ox * 3 + nudge[0] * scale;
             const my = ly + oy * 3 + nudge[1] * scale;
             ctx.fillStyle = 'rgba(184,148,112,0.7)';
             ctx.font = `${Math.round(13 * scale)}px ui-monospace, monospace`;
             ctx.textAlign = 'center';
-            ctx.fillText(matrix[i][j].toFixed(1), mx, my);
+            ctx.fillText(matrix[i]![j]!.toFixed(1), mx, my);
           }
         }
       }
 
       // Self-loops as horseshoe arcs (above for top/mid nodes, below for bottom nodes)
       for (let i = 0; i < STATES; i++) {
-        if (matrix[i][i] < 0.01) continue;
-        const [x, y] = pos[i];
+        if (matrix[i]![i]! < 0.01) continue;
+        const [x, y] = pos[i]!;
         const loopR = Math.round(12 * scale);
         const isBottom = y > H * 0.6;
         const loopCy = isBottom ? y + nodeR + loopR - 2 : y - nodeR - loopR + 2;
@@ -239,21 +237,21 @@ export default function (Alpine: Alpine) {
         ctx.fillStyle = 'rgba(184,148,112,0.7)';
         ctx.font = `${Math.round(13 * scale)}px ui-monospace, monospace`;
         ctx.textAlign = 'center';
-        const loopKey = STATE_LABELS[i] + '->' + STATE_LABELS[i];
+        const loopKey = STATE_LABELS[i]! + '->' + STATE_LABELS[i]!;
         const loopNudge = LABEL_NUDGE[loopKey] || [0, 0];
         const labelY = isBottom ? loopCy + loopR + 14 * scale : loopCy - loopR - 6 * scale;
-        ctx.fillText(matrix[i][i].toFixed(1), x + loopNudge[0] * scale, labelY + loopNudge[1] * scale);
+        ctx.fillText(matrix[i]![i]!.toFixed(1), x + loopNudge[0] * scale, labelY + loopNudge[1] * scale);
       }
 
       // Draw nodes
       for (let i = 0; i < STATES; i++) {
-        const [x, y] = pos[i];
+        const [x, y] = pos[i]!;
         const isActive = i === current;
         const wasPrev = i === prevState && prevState !== current;
         const r = isActive ? nodeR * pulseScale : nodeR;
 
         // Parse node color into RGB for interpolation
-        const hex = COLORS[i];
+        const hex = COLORS[i]!;
         const cr = parseInt(hex.slice(1, 3), 16);
         const cg = parseInt(hex.slice(3, 5), 16);
         const cb = parseInt(hex.slice(5, 7), 16);
@@ -272,7 +270,7 @@ export default function (Alpine: Alpine) {
         const fg = Math.round(dark.g + (cg - dark.g) * fillAlpha);
         const fb = Math.round(dark.b + (cb - dark.b) * fillAlpha);
         ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
-        ctx.strokeStyle = COLORS[i];
+        ctx.strokeStyle = COLORS[i]!;
         ctx.lineWidth = isActive ? 2.5 : 1.5;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -280,11 +278,11 @@ export default function (Alpine: Alpine) {
         ctx.stroke();
 
         const textAlpha = fillAlpha > 0.5 ? 1 : 0;
-        ctx.fillStyle = textAlpha ? '#1a0c06' : COLORS[i];
+        ctx.fillStyle = textAlpha ? '#1a0c06' : COLORS[i]!;
         ctx.font = `italic ${Math.round(15 * scale)}px Georgia, serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(STATE_LABELS[i], x, y);
+        ctx.fillText(STATE_LABELS[i]!, x, y);
       }
       ctx.textBaseline = 'alphabetic';
     }
@@ -324,7 +322,7 @@ export default function (Alpine: Alpine) {
         const next = new Array(STATES).fill(0);
         for (let j = 0; j < STATES; j++) {
           for (let i = 0; i < STATES; i++) {
-            next[j] += pi[i] * matrix[i][j];
+            next[j] += pi[i]! * matrix[i]![j]!;
           }
         }
         pi = next;
@@ -376,7 +374,7 @@ export default function (Alpine: Alpine) {
 
       draw() {
         drawDiagram(this.matrix, this.current, this.visits);
-        updateHist(this.visits, this.totalSteps);
+        updateHist();
       },
 
       reset() {
@@ -396,21 +394,21 @@ export default function (Alpine: Alpine) {
           if (!self.running) return;
           // Inline the step logic to avoid proxy issues
           const prev = self.current;
-          const row = self.matrix[prev];
+          const row = self.matrix[prev]!;
           let r = Math.random();
           let next = 0;
           for (let j = 0; j < STATES; j++) {
-            r -= row[j];
+            r -= row[j]!;
             if (r <= 0) { next = j; break; }
           }
           self.current = next;
           const v = [...self.visits];
-          v[next]++;
+          v[next] = (v[next] ?? 0) + 1;
           self.visits = v;
           self.totalSteps++;
           self.stepsDisplay = String(self.totalSteps);
           triggerPulse(self.matrix, self.current, self.visits, prev);
-          updateHist(self.visits, self.totalSteps);
+          updateHist();
 
           walkTimer = setTimeout(doStep, self.speedMs);
         };
@@ -424,27 +422,27 @@ export default function (Alpine: Alpine) {
 
       setTransition(i: number, j: number, val: string) {
         const v = parseFloat(val) || 0;
-        const old = this.matrix[i][j];
+        const old = this.matrix[i]![j]!;
         const diff = v - old;
-        this.matrix[i][j] = v;
+        this.matrix[i]![j] = v;
 
         // Redistribute diff across other entries in row i
         const others = [];
         for (let k = 0; k < STATES; k++) {
-          if (k !== j && this.matrix[i][k] > 0.01) others.push(k);
+          if (k !== j && this.matrix[i]![k]! > 0.01) others.push(k);
         }
         if (others.length > 0) {
           const each = diff / others.length;
           others.forEach(k => {
-            this.matrix[i][k] = Math.max(0, this.matrix[i][k] - each);
+            this.matrix[i]![k] = Math.max(0, this.matrix[i]![k]! - each);
           });
         }
 
         // Normalize
         let sum = 0;
-        for (let k = 0; k < STATES; k++) sum += this.matrix[i][k];
+        for (let k = 0; k < STATES; k++) sum += this.matrix[i]![k]!;
         if (sum > 0) {
-          for (let k = 0; k < STATES; k++) this.matrix[i][k] /= sum;
+          for (let k = 0; k < STATES; k++) this.matrix[i]![k] = this.matrix[i]![k]! / sum;
         }
 
         this.recalc();

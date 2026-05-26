@@ -66,7 +66,7 @@ export default function (Alpine: Alpine) {
       const gap = 3;
       const rowH = (plotH - gap * (NUM_EXPERIMENTS - 1)) / NUM_EXPERIMENTS;
       const barH = rowH;
-      const bracketH = 0;
+
 
       const trueX = toX(trueMu);
       ctx.strokeStyle = 'rgba(240,216,168,0.25)';
@@ -82,7 +82,7 @@ export default function (Alpine: Alpine) {
       ctx.fillText('θ', trueX, pad.top + plotH + 40);
 
       for (let i = 0; i < count; i++) {
-        const e = experiments[i];
+        const e = experiments[i]!;
         const y = pad.top + i * (rowH + gap) + rowH / 2;
         const x1 = toX(e.lo);
         const x2 = toX(e.hi);

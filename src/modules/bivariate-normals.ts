@@ -67,7 +67,7 @@ export default function (Alpine: Alpine) {
           const x = -RANGE + i * step;
           const y = -RANGE + j * step;
           const v = jointPdf(x, y, sx, sy, rho);
-          vals[i][j] = v;
+          vals[i]![j] = v;
           if (v > maxV) maxV = v;
         }
       }
@@ -89,10 +89,10 @@ export default function (Alpine: Alpine) {
         const y0 = -RANGE + j * step;
         const y1 = y0 + step;
 
-        const v00 = vals[i][j];
-        const v10 = vals[i + 1][j];
-        const v01 = vals[i][j + 1];
-        const v11 = vals[i + 1][j + 1];
+        const v00 = vals[i]![j]!;
+        const v10 = vals[i + 1]![j]!;
+        const v01 = vals[i]![j + 1]!;
+        const v11 = vals[i + 1]![j + 1]!;
         const avgV = (v00 + v10 + v01 + v11) / 4;
 
         const [p0x, p0y] = project(x0, y0, v00, W, H);
@@ -380,7 +380,7 @@ export default function (Alpine: Alpine) {
           },
         });
       } else {
-        sliceChart.data.datasets[0].data = data;
+        sliceChart.data.datasets[0]!.data = data;
         sliceChart.update('none');
       }
     }

@@ -103,7 +103,7 @@ export default function (Alpine: Alpine) {
 
         let totalErr = 0;
         for (let k = 0; k <= n; k++) {
-          totalErr += Math.abs(pmf[k] - normalApprox[k]);
+          totalErr += Math.abs(pmf[k]! - normalApprox[k]!);
         }
         this.info = `μ = ${mu.toFixed(1)}  σ = ${sigma.toFixed(2)}  total |error| = ${totalErr.toFixed(4)}`;
 
@@ -132,7 +132,7 @@ export default function (Alpine: Alpine) {
                 {
                   type: 'line',
                   label: 'Normal approx',
-                  data: normCurve,
+                  data: normCurve as any,
                   borderColor: COLORS.olivine,
                   borderWidth: 2,
                   pointRadius: 0,
@@ -169,8 +169,8 @@ export default function (Alpine: Alpine) {
           });
         } else {
           nbChart.data.labels = ks;
-          nbChart.data.datasets[0].data = pmf;
-          nbChart.data.datasets[1].data = normCurve;
+          nbChart.data.datasets[0]!.data = pmf;
+          nbChart.data.datasets[1]!.data = normCurve as any;
           (nbChart.options.scales!.x as any).min = xMin;
           (nbChart.options.scales!.x as any).max = xMax;
           (nbChart.options.scales!.x as any).ticks.stepSize = n <= 20 ? 1 : undefined;
