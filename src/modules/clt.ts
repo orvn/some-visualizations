@@ -110,8 +110,8 @@ export default function (Alpine: Alpine) {
       (histChart.options.scales!.xLine as any).max = max;
       histChart.data.labels = centers;
 
-      histChart.data.datasets[0].data = new Array(density.length).fill(0);
-      histChart.data.datasets[1].data = normData.map(pt => ({ x: pt.x, y: null as any }));
+      histChart.data.datasets[0]!.data = new Array(density.length).fill(0);
+      histChart.data.datasets[1]!.data = normData.map(pt => ({ x: pt.x, y: null as any }));
       (histChart.data.datasets[1] as any).borderColor = 'rgba(144,184,120,0)';
       histChart.update('none');
 
@@ -140,8 +140,8 @@ export default function (Alpine: Alpine) {
           (histChart.data.datasets[1] as any).borderColor = COLORS.olivine;
         }
 
-        histChart.data.datasets[0].data = barData;
-        histChart.data.datasets[1].data = normData.map((pt, i) =>
+        histChart.data.datasets[0]!.data = barData;
+        histChart.data.datasets[1]!.data = normData.map((pt, i) =>
           i < normEnd ? pt : { x: pt.x, y: null as any }
         );
         histChart.update('none');

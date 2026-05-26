@@ -50,10 +50,10 @@ export default function (Alpine: Alpine) {
         const t = Math.random() * TOTAL_TIME;
         let idx = 0;
         for (let j = 0; j < starts.length; j++) {
-          if (starts[j] <= t) idx = j;
+          if (starts[j]! <= t) idx = j;
           else break;
         }
-        observed.push(intervals[idx]);
+        observed.push(intervals[idx]!);
       }
       return observed;
     }
@@ -103,8 +103,8 @@ export default function (Alpine: Alpine) {
       ctx.fillStyle = '#7a5a3a';
       ctx.font = '9px ui-monospace, monospace';
       intervals.forEach((gap, i) => {
-        const startX = pad.left + (starts[i] / TOTAL_TIME) * plotW;
-        const endX = pad.left + ((starts[i] + gap) / TOTAL_TIME) * plotW;
+        const startX = pad.left + (starts[i]! / TOTAL_TIME) * plotW;
+        const endX = pad.left + ((starts[i]! + gap) / TOTAL_TIME) * plotW;
         if (endX - startX > 25) {
           ctx.fillText(gap.toFixed(1), (startX + endX) / 2, axisY - 14);
         }
@@ -125,18 +125,18 @@ export default function (Alpine: Alpine) {
 
         let idx = 0;
         for (let j = 0; j < starts.length; j++) {
-          if (starts[j] <= pinTime) idx = j;
+          if (starts[j]! <= pinTime) idx = j;
           else break;
         }
-        const iStart = pad.left + (starts[idx] / TOTAL_TIME) * plotW;
-        const iEnd = pad.left + ((starts[idx] + intervals[idx]) / TOTAL_TIME) * plotW;
+        const iStart = pad.left + (starts[idx]! / TOTAL_TIME) * plotW;
+        const iEnd = pad.left + ((starts[idx]! + intervals[idx]!) / TOTAL_TIME) * plotW;
         ctx.fillStyle = 'rgba(240,120,88,0.12)';
         ctx.fillRect(iStart, axisY - 12, iEnd - iStart, 24);
 
         ctx.fillStyle = '#f07858';
         ctx.font = '10px ui-monospace, monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`landed in ${intervals[idx].toFixed(1)}s gap`, px, axisY + 30);
+        ctx.fillText(`landed in ${intervals[idx]!.toFixed(1)}s gap`, px, axisY + 30);
       }
     }
 

@@ -106,14 +106,14 @@ export default function (Alpine: Alpine) {
       if (!chart) return;
       const showLive = mode === 'a';
       if (showLive) {
-        chart.data.datasets[LIVE_IDX].data = X_VALS.map((x) => pdf(x, currentVal));
+        chart.data.datasets[LIVE_IDX]!.data = X_VALS.map((x) => pdf(x, currentVal));
         for (let i = REF_START; i <= REF_END; i++) {
-          chart.data.datasets[i].data = ZEROS;
+          chart.data.datasets[i]!.data = ZEROS;
         }
       } else {
-        chart.data.datasets[LIVE_IDX].data = ZEROS;
+        chart.data.datasets[LIVE_IDX]!.data = ZEROS;
         for (let i = REF_START; i <= REF_END; i++) {
-          chart.data.datasets[i].data = refData[i - REF_START];
+          chart.data.datasets[i]!.data = refData[i - REF_START]!;
         }
       }
       chart.update();
@@ -121,7 +121,7 @@ export default function (Alpine: Alpine) {
 
     function updateLiveData(variance: number) {
       if (!chart) return;
-      chart.data.datasets[LIVE_IDX].data = X_VALS.map((x) => pdf(x, variance));
+      chart.data.datasets[LIVE_IDX]!.data = X_VALS.map((x) => pdf(x, variance));
       chart.update('none');
     }
 

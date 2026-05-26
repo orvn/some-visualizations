@@ -120,9 +120,9 @@ export default function (Alpine: Alpine) {
         overlap.push({ x, y: Math.min(fv, gv) > 0 ? fv * gv : 0 });
       }
 
-      chart.data.datasets[0].data = fData;
-      chart.data.datasets[1].data = gFlipped;
-      chart.data.datasets[2].data = overlap;
+      chart.data.datasets[0]!.data = fData;
+      chart.data.datasets[1]!.data = gFlipped;
+      chart.data.datasets[2]!.data = overlap;
       chart.update('none');
     }
 
@@ -153,7 +153,7 @@ export default function (Alpine: Alpine) {
           const zz = X_MIN + i * DX;
           result.push({ x: zz, y: convolve(def.f, def.g, zz) });
         }
-        resultChart.data.datasets[0].data = result;
+        resultChart.data.datasets[0]!.data = result;
         resultChart.update('none');
       },
 
@@ -168,7 +168,7 @@ export default function (Alpine: Alpine) {
         const result: { x: number; y: number }[] = [];
 
         if (resultChart) {
-          resultChart.data.datasets[0].data = [];
+          resultChart.data.datasets[0]!.data = [];
           resultChart.update('none');
         }
 
@@ -187,7 +187,7 @@ export default function (Alpine: Alpine) {
 
           result.push({ x: zVal, y: convolve(def.f, def.g, zVal) });
           if (resultChart) {
-            resultChart.data.datasets[0].data = [...result];
+            resultChart.data.datasets[0]!.data = [...result];
             resultChart.update('none');
           }
 

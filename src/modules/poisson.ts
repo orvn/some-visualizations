@@ -67,10 +67,10 @@ export default function (Alpine: Alpine) {
       ctx.textAlign = 'center';
       for (let i = 0; i < arrivals.length; i++) {
         const prev = i === 0 ? 0 : arrivals[i - 1];
-        const curr = arrivals[i];
-        const gap = curr - prev;
+        const curr = arrivals[i]!;
+        const gap = curr - prev!;
         if (gap * plotW / maxTime > 30) {
-          const mx = pad.left + ((prev + curr) / 2 / maxTime) * plotW;
+          const mx = pad.left + ((prev! + curr) / 2 / maxTime) * plotW;
           ctx.fillText(gap.toFixed(1), mx, axisY - 20);
         }
       }
@@ -96,7 +96,7 @@ export default function (Alpine: Alpine) {
 
     function buildStaircase(arrivals: number[], maxTime: number) {
       if (staircaseChart) {
-        staircaseChart.data.datasets[0].data = stairData(arrivals, maxTime);
+        staircaseChart.data.datasets[0]!.data = stairData(arrivals, maxTime);
         (staircaseChart.options.scales!.x as any).max = maxTime;
         staircaseChart.update('none');
         return;
@@ -198,7 +198,7 @@ export default function (Alpine: Alpine) {
 
         const tick = () => {
           if (step < arr.length) {
-            shown.push(arr[step]);
+            shown.push(arr[step]!);
             step++;
           }
 
@@ -206,7 +206,7 @@ export default function (Alpine: Alpine) {
           buildStaircase(shown, maxT);
 
           const avgGap = shown.length > 1
-            ? (shown[shown.length - 1] / shown.length).toFixed(2)
+            ? (shown[shown.length - 1]! / shown.length).toFixed(2)
             : '—';
           self.info = `${shown.length} arrivals  ·  avg interarrival: ${avgGap}  ·  expected: ${(1 / rate).toFixed(2)}`;
 

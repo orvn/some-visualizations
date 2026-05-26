@@ -13,9 +13,9 @@ export default function (Alpine: Alpine) {
     const factorialMemo: number[] = [];
     function factorial(m: number): number {
       if (m === 0 || m === 1) return 1;
-      if (factorialMemo[m] > 0) return factorialMemo[m];
+      if (factorialMemo[m]! > 0) return factorialMemo[m]!;
       factorialMemo[m] = factorial(m - 1) * m;
-      return factorialMemo[m];
+      return factorialMemo[m]!;
     }
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -167,7 +167,7 @@ export default function (Alpine: Alpine) {
             values: grid.map(d => ({ x: d, y: beta(d) })),
           });
 
-          const last = self.data[self.data.length - 1];
+          const last = self.data[self.data.length - 1] as any;
           const peak = last.values.reduce((p: any, d: any) => d.y > p.y ? d : p);
 
           if (peak.y > ymax) {
@@ -189,7 +189,7 @@ export default function (Alpine: Alpine) {
           trials.enter()
             .append('path')
             .attr('class', 'trial')
-            .attr('d', () => lineFn(self.data[self.data.length - 2].values))
+            .attr('d', () => lineFn((self.data[self.data.length - 2] as any).values))
             .attr('id', (d: any) => d.trial);
 
           d3svg.select(`path#num${n}`)
