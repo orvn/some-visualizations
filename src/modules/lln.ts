@@ -1,6 +1,7 @@
 // lln page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
+import { COLORS, axis, legend } from './shared/chart';
 
 export default function (Alpine: Alpine) {
   Alpine.data('llnViz', () => {
@@ -54,7 +55,7 @@ export default function (Alpine: Alpine) {
         {
           label: 'Sample mean Mₙ',
           data: means,
-          borderColor: '#f0d8a8',
+          borderColor: COLORS.colonial,
           borderWidth: 1.5,
           pointRadius: 0,
           fill: false,
@@ -63,7 +64,7 @@ export default function (Alpine: Alpine) {
         {
           label: 'True mean μ',
           data: new Array(N).fill(mu),
-          borderColor: '#b89470',
+          borderColor: COLORS.teak,
           borderWidth: 1,
           borderDash: [6, 4],
           pointRadius: 0,
@@ -103,29 +104,17 @@ export default function (Alpine: Alpine) {
             maintainAspectRatio: true,
             aspectRatio: window.innerWidth < 480 ? 0.75 : 2.4,
             plugins: {
-              legend: {
-                display: true,
-                labels: {
-                  color: '#b89470', font: { size: 11 }, boxWidth: 18, boxHeight: 0,
-                  filter: (item: any) => !item.text.includes('lower'),
-                },
-              },
+              legend: legend({ labels: { filter: (item: any) => !item.text.includes('lower') } }),
               tooltip: { enabled: false },
             },
             scales: {
-              x: {
+              x: axis({
                 type: 'linear', min: 1, max: N,
-                ticks: { color: '#7a5a3a' },
-                grid: { color: '#2e1508' },
-                border: { color: '#3a1a0a' },
-                title: { display: true, text: 'n (samples)', color: '#7a5a3a' },
-              },
-              y: {
-                ticks: { color: '#7a5a3a' },
-                grid: { color: '#2e1508' },
-                border: { color: '#3a1a0a' },
-                title: { display: true, text: 'Mₙ', color: '#7a5a3a' },
-              },
+                title: { display: true, text: 'n (samples)', color: COLORS.pottersClay },
+              }),
+              y: axis({
+                title: { display: true, text: 'Mₙ', color: COLORS.pottersClay },
+              }),
             },
           },
         });
@@ -141,21 +130,21 @@ export default function (Alpine: Alpine) {
           decayDatasets.push({
             label: 'Markov',
             data: xLabels.map((n) => Math.min(sigma / (eps * Math.sqrt(n)), 1)),
-            borderColor: '#f07858', borderWidth: 2, pointRadius: 0, fill: false,
+            borderColor: COLORS.sienna, borderWidth: 2, pointRadius: 0, fill: false,
           });
         }
         if (showCheb) {
           decayDatasets.push({
             label: 'Chebyshev',
             data: xLabels.map((n) => Math.min(sigma * sigma / (n * eps * eps), 1)),
-            borderColor: '#90b878', borderWidth: 2, pointRadius: 0, fill: false,
+            borderColor: COLORS.olivine, borderWidth: 2, pointRadius: 0, fill: false,
           });
         }
         if (showChernoff && bounded) {
           decayDatasets.push({
             label: 'Chernoff',
             data: xLabels.map((n) => Math.min(2 * Math.exp(-2 * n * eps * eps / (R * R)), 1)),
-            borderColor: '#e8a050', borderWidth: 2, pointRadius: 0, fill: false,
+            borderColor: COLORS.porsche, borderWidth: 2, pointRadius: 0, fill: false,
           });
         }
 
@@ -168,27 +157,18 @@ export default function (Alpine: Alpine) {
             maintainAspectRatio: true,
             aspectRatio: 2.8,
             plugins: {
-              legend: {
-                display: true,
-                labels: { color: '#b89470', font: { size: 11 }, boxWidth: 18, boxHeight: 0 },
-              },
+              legend: legend(),
               tooltip: { enabled: false },
             },
             scales: {
-              x: {
+              x: axis({
                 type: 'linear', min: 1, max: N,
-                ticks: { color: '#7a5a3a' },
-                grid: { color: '#2e1508' },
-                border: { color: '#3a1a0a' },
-                title: { display: true, text: 'n', color: '#7a5a3a' },
-              },
-              y: {
+                title: { display: true, text: 'n', color: COLORS.pottersClay },
+              }),
+              y: axis({
                 min: 0, max: 1,
-                ticks: { color: '#7a5a3a' },
-                grid: { color: '#2e1508' },
-                border: { color: '#3a1a0a' },
-                title: { display: true, text: 'ℙ(|Mₙ-μ| ≥ ε)', color: '#7a5a3a' },
-              },
+                title: { display: true, text: 'ℙ(|Mₙ-μ| ≥ ε)', color: COLORS.pottersClay },
+              }),
             },
           },
         });

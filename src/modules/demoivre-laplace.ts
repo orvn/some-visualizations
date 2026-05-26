@@ -1,7 +1,7 @@
 // demoivre-laplace page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
-import { makeScriptableGrad } from './shared/chart';
+import { makeScriptableGrad, COLORS, axis, legend } from './shared/chart';
 import { createStripePattern } from './shared/canvas';
 import { normalPdf, normalCdf } from './shared/stats';
 
@@ -123,8 +123,8 @@ export default function (Alpine: Alpine) {
                   type: 'bar',
                   label: 'Binomial PMF',
                   data: pmf,
-                  backgroundColor: createStripePattern('#f0d8a8'),
-                  borderColor: '#f0d8a8',
+                  backgroundColor: createStripePattern(COLORS.colonial),
+                  borderColor: COLORS.colonial,
                   borderWidth: 1,
                   barPercentage: 0.7,
                   categoryPercentage: 0.7,
@@ -133,7 +133,7 @@ export default function (Alpine: Alpine) {
                   type: 'line',
                   label: 'Normal approx',
                   data: normCurve,
-                  borderColor: '#90b878',
+                  borderColor: COLORS.olivine,
                   borderWidth: 2,
                   pointRadius: 0,
                   fill: true,
@@ -147,28 +147,23 @@ export default function (Alpine: Alpine) {
               animation: { duration: 300, easing: 'easeOutQuart' as const },
               responsive: true, maintainAspectRatio: true, aspectRatio: 2.2,
               plugins: {
-                legend: { display: true, labels: { color: '#b89470', font: { size: 11 }, boxWidth: 18, boxHeight: 0 } },
+                legend: legend(),
                 tooltip: { enabled: false },
               },
               scales: {
-                x: {
+                x: axis({
                   type: 'linear', min: lo, max: hi,
-                  ticks: { color: '#7a5a3a', stepSize: n <= 20 ? 1 : undefined },
-                  grid: { color: '#2e1508' },
-                  border: { color: '#3a1a0a' },
-                  title: { display: true, text: 'k', color: '#7a5a3a' },
-                },
+                  ticks: { stepSize: n <= 20 ? 1 : undefined },
+                  title: { display: true, text: 'k', color: COLORS.pottersClay },
+                }),
                 xLine: {
                   type: 'linear', display: false,
                   min: lo, max: hi,
                 },
-                y: {
+                y: axis({
                   min: 0,
-                  ticks: { color: '#7a5a3a' },
-                  grid: { color: '#2e1508' },
-                  border: { color: '#3a1a0a' },
-                  title: { display: true, text: 'ℙ(X = k)', color: '#7a5a3a' },
-                },
+                  title: { display: true, text: 'ℙ(X = k)', color: COLORS.pottersClay },
+                }),
               },
             },
           });

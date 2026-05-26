@@ -13,6 +13,47 @@ Chart.register({
   },
 });
 
+// theme colors for charting (matches variables.css)
+export const COLORS = {
+  graphite: '#1a0c06',
+  clinker: '#2e1508',
+  bronze: '#3a1a0a',
+  pottersClay: '#7a5a3a',
+  teak: '#b89470',
+  colonial: '#f0d8a8',
+  porsche: '#e8a050',
+  olivine: '#90b878',
+  sienna: '#f07858',
+};
+
+export function alpha(hex: string, a: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// themed axis config — spread into scales.x or scales.y
+export function axis(opts: Record<string, any> = {}) {
+  return {
+    ticks: { color: COLORS.pottersClay, ...opts.ticks },
+    grid: { color: COLORS.clinker },
+    border: { color: COLORS.bronze },
+    ...opts,
+    ...(opts.ticks ? { ticks: { color: COLORS.pottersClay, ...opts.ticks } } : {}),
+  };
+}
+
+// common legend config
+export function legend(opts: Record<string, any> = {}) {
+  return {
+    display: true,
+    labels: { color: COLORS.teak, font: { size: 11 }, boxWidth: 18, boxHeight: 0, ...opts.labels },
+    ...opts,
+    ...(opts.labels ? { labels: { color: COLORS.teak, font: { size: 11 }, boxWidth: 18, boxHeight: 0, ...opts.labels } } : {}),
+  };
+}
+
 export function makeScriptableGrad(hex: string, a0 = 0.5, a1 = 0.01) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);

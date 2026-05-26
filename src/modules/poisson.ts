@@ -1,6 +1,7 @@
 // poisson page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
+import { COLORS, axis } from './shared/chart';
 import { waitForCanvas, initHDPI } from './shared/canvas';
 
 export default function (Alpine: Alpine) {
@@ -112,7 +113,7 @@ export default function (Alpine: Alpine) {
           datasets: [{
             label: 'N(t)',
             data: stairData(arrivals, maxTime),
-            borderColor: '#90b878',
+            borderColor: COLORS.olivine,
             borderWidth: 2,
             pointRadius: 0,
             fill: false,
@@ -129,22 +130,8 @@ export default function (Alpine: Alpine) {
             tooltip: { enabled: false },
           },
           scales: {
-            x: {
-              type: 'linear',
-              min: 0,
-              max: maxTime,
-              ticks: { color: '#7a5a3a' },
-              grid: { color: '#2e1508' },
-              border: { color: '#3a1a0a' },
-              title: { display: true, text: 'time', color: '#7a5a3a' },
-            },
-            y: {
-              min: 0,
-              ticks: { color: '#7a5a3a', stepSize: 1 },
-              grid: { color: '#2e1508' },
-              border: { color: '#3a1a0a' },
-              title: { display: true, text: 'N(t)', color: '#7a5a3a' },
-            },
+            x: axis({ type: 'linear', min: 0, max: maxTime, title: { display: true, text: 'time', color: COLORS.pottersClay } }),
+            y: axis({ min: 0, ticks: { color: COLORS.pottersClay, stepSize: 1 }, title: { display: true, text: 'N(t)', color: COLORS.pottersClay } }),
           },
         },
       });

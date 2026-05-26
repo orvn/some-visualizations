@@ -1,7 +1,7 @@
 // clt page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
-import { makeScriptableGrad } from './shared/chart';
+import { makeScriptableGrad, COLORS, axis, legend } from './shared/chart';
 import { normalPdf } from './shared/stats';
 
 export default function (Alpine: Alpine) {
@@ -28,7 +28,7 @@ export default function (Alpine: Alpine) {
               type: 'bar',
               label: 'Sₙ histogram',
               data: [],
-              backgroundColor: '#f0d8a8',
+              backgroundColor: COLORS.colonial,
               borderColor: 'transparent',
               borderWidth: 0,
               barPercentage: 0.5,
@@ -38,7 +38,7 @@ export default function (Alpine: Alpine) {
               type: 'line',
               label: 'N(0,1)',
               data: [],
-              borderColor: '#90b878',
+              borderColor: COLORS.olivine,
               borderWidth: 2,
               pointRadius: 0,
               tension: 0.4,
@@ -55,35 +55,24 @@ export default function (Alpine: Alpine) {
           maintainAspectRatio: true,
           aspectRatio: 2.2,
           plugins: {
-            legend: {
-              display: true,
-              labels: { color: '#b89470', font: { size: 12 }, boxWidth: 12 },
-            },
+            legend: legend({ labels: { font: { size: 12 }, boxWidth: 12 } }),
             tooltip: { enabled: false },
           },
           scales: {
-            x: {
+            x: axis({
               type: 'linear',
               display: true,
-              ticks: {
-                color: '#7a5a3a',
-                callback: (v: any) => typeof v === 'number' ? v.toFixed(1) : v,
-              },
-              grid: { color: '#2e1508' },
-              border: { color: '#3a1a0a' },
-              title: { display: true, text: 'Zₙ', color: '#7a5a3a' },
-            },
+              ticks: { callback: (v: any) => typeof v === 'number' ? v.toFixed(1) : v },
+              title: { display: true, text: 'Zₙ', color: COLORS.pottersClay },
+            }),
             xLine: {
               type: 'linear',
               display: false,
             },
-            y: {
+            y: axis({
               min: 0,
-              ticks: { color: '#7a5a3a' },
-              grid: { color: '#2e1508' },
-              border: { color: '#3a1a0a' },
-              title: { display: true, text: 'density', color: '#7a5a3a' },
-            },
+              title: { display: true, text: 'density', color: COLORS.pottersClay },
+            }),
           },
         },
       });
@@ -148,7 +137,7 @@ export default function (Alpine: Alpine) {
         const normEnd = Math.floor(normProgress * normTotal);
 
         if (normEnd > 0) {
-          (histChart.data.datasets[1] as any).borderColor = '#90b878';
+          (histChart.data.datasets[1] as any).borderColor = COLORS.olivine;
         }
 
         histChart.data.datasets[0].data = barData;

@@ -1,7 +1,7 @@
 // normals page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
-import { makeScriptableGrad } from './shared/chart';
+import { makeScriptableGrad, COLORS, axis, legend } from './shared/chart';
 
 const MEAN = 0;
 const X_VALS: number[] = [];
@@ -18,9 +18,9 @@ const REF_END = 3;
 const ZEROS = X_VALS.map(() => 0);
 
 const REFS = [
-  { v: 0.25, label: 'σ²=0.25  tight', color: '#f07858' },
-  { v: 1, label: 'σ²=1  standard', color: '#e8a050' },
-  { v: 4, label: 'σ²=4  wide', color: '#90b878' },
+  { v: 0.25, label: 'σ²=0.25  tight', color: COLORS.sienna },
+  { v: 1, label: 'σ²=1  standard', color: COLORS.porsche },
+  { v: 4, label: 'σ²=4  wide', color: COLORS.olivine },
 ];
 
 const refData = REFS.map((r) => X_VALS.map((x) => pdf(x, r.v)));
@@ -31,39 +31,33 @@ const BASE_OPTIONS = {
   maintainAspectRatio: true,
   aspectRatio: 2.4,
   plugins: {
-    legend: {
-      display: true,
+    legend: legend({
       labels: {
-        color: '#b89470', font: { size: 12 }, boxWidth: 12,
+        font: { size: 12 }, boxWidth: 12,
         filter: (item: any, chartData: any) => {
           const ds = chartData.datasets[item.datasetIndex];
           return ds.data.some((v: number) => v > 0);
         },
       },
-    },
+    }),
     tooltip: {
-      backgroundColor: '#2e1508',
-      borderColor: '#3a1a0a',
+      backgroundColor: COLORS.clinker,
+      borderColor: COLORS.bronze,
       borderWidth: 1,
-      titleColor: '#7a5a3a',
-      bodyColor: '#f0d8a8',
+      titleColor: COLORS.pottersClay,
+      bodyColor: COLORS.colonial,
     },
   },
   scales: {
-    x: {
+    x: axis({
       type: 'linear' as const, min: -6, max: 6,
-      ticks: { color: '#7a5a3a', maxTicksLimit: 13 },
-      grid: { color: '#2e1508' },
-      border: { color: '#3a1a0a' },
-      title: { display: true, text: 'x', color: '#7a5a3a' },
-    },
-    y: {
+      ticks: { maxTicksLimit: 13 },
+      title: { display: true, text: 'x', color: COLORS.pottersClay },
+    }),
+    y: axis({
       min: 0, max: 0.85,
-      ticks: { color: '#7a5a3a' },
-      grid: { color: '#2e1508' },
-      border: { color: '#3a1a0a' },
-      title: { display: true, text: 'P(x)', color: '#7a5a3a' },
-    },
+      title: { display: true, text: 'P(x)', color: COLORS.pottersClay },
+    }),
   },
 };
 
@@ -83,7 +77,7 @@ export default function (Alpine: Alpine) {
         {
           label: 'distribution',
           data: X_VALS.map((x) => pdf(x, initVariance)),
-          borderColor: '#f0d8a8', borderWidth: 3,
+          borderColor: COLORS.colonial, borderWidth: 3,
           backgroundColor: makeScriptableGrad('#f0d8a8', 0.55, 0.01),
           fill: true, pointRadius: 0, tension: 0.4,
         },

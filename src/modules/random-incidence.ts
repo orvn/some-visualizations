@@ -1,6 +1,7 @@
 // random-incidence page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
+import { COLORS, axis, legend } from './shared/chart';
 import { waitForCanvas, initHDPI } from './shared/canvas';
 
 export default function (Alpine: Alpine) {
@@ -189,24 +190,12 @@ export default function (Alpine: Alpine) {
         options: {
           animation: false, responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
           plugins: {
-            legend: { display: true, labels: { color: '#b89470', font: { size: 11 }, boxWidth: 12 } },
+            legend: legend({ labels: { boxWidth: 12 } }),
             tooltip: { enabled: false },
           },
           scales: {
-            x: {
-              type: 'linear',
-              ticks: { color: '#7a5a3a', callback: (v: any) => typeof v === 'number' ? v.toFixed(1) : v },
-              grid: { color: '#2e1508' },
-              border: { color: '#3a1a0a' },
-              title: { display: true, text: 'interval length', color: '#7a5a3a' },
-            },
-            y: {
-              min: 0,
-              ticks: { color: '#7a5a3a' },
-              grid: { color: '#2e1508' },
-              border: { color: '#3a1a0a' },
-              title: { display: true, text: 'density', color: '#7a5a3a' },
-            },
+            x: axis({ type: 'linear', ticks: { color: COLORS.pottersClay, callback: (v: any) => typeof v === 'number' ? v.toFixed(1) : v }, title: { display: true, text: 'interval length', color: COLORS.pottersClay } }),
+            y: axis({ min: 0, title: { display: true, text: 'density', color: COLORS.pottersClay } }),
           },
         },
       });

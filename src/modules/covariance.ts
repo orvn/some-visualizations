@@ -1,6 +1,7 @@
 // covariance page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
+import { COLORS, axis } from './shared/chart';
 import { boxMuller } from './shared/stats';
 
 export default function (Alpine: Alpine) {
@@ -22,7 +23,7 @@ export default function (Alpine: Alpine) {
     return {
       rho: '0',
       info: '',
-      accentColor: '#f0d8a8',
+      accentColor: COLORS.colonial,
 
       init() {
         this.render();
@@ -73,20 +74,8 @@ export default function (Alpine: Alpine) {
                 tooltip: { enabled: false },
               },
               scales: {
-                x: {
-                  min: -4, max: 4,
-                  ticks: { color: '#7a5a3a' },
-                  grid: { color: '#2e1508' },
-                  border: { color: '#3a1a0a' },
-                  title: { display: true, text: 'X', color: '#7a5a3a' },
-                },
-                y: {
-                  min: -4, max: 4,
-                  ticks: { color: '#7a5a3a' },
-                  grid: { color: '#2e1508' },
-                  border: { color: '#3a1a0a' },
-                  title: { display: true, text: 'Y', color: '#7a5a3a' },
-                },
+                x: axis({ min: -4, max: 4, title: { display: true, text: 'X', color: COLORS.pottersClay } }),
+                y: axis({ min: -4, max: 4, title: { display: true, text: 'Y', color: COLORS.pottersClay } }),
               },
             },
           });

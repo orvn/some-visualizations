@@ -1,7 +1,7 @@
 // bivariate-normals page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
-import { makeScriptableGrad } from './shared/chart';
+import { makeScriptableGrad, COLORS, axis, legend } from './shared/chart';
 import { waitForCanvas, initHDPI } from './shared/canvas';
 
 export default function (Alpine: Alpine) {
@@ -359,36 +359,23 @@ export default function (Alpine: Alpine) {
             datasets: [{
               label: 'f(x|Y=y)',
               data,
-              borderColor: '#f07858',
+              borderColor: COLORS.sienna,
               borderWidth: 2,
               pointRadius: 0,
               fill: true,
-              backgroundColor: makeScriptableGrad('#f07858', 0.25, 0.01),
+              backgroundColor: makeScriptableGrad(COLORS.sienna, 0.25, 0.01),
               tension: 0.4,
             }],
           },
           options: {
             animation: false, responsive: true, maintainAspectRatio: true, aspectRatio: 1.8,
             plugins: {
-              legend: { display: true, labels: { color: '#b89470', font: { size: 11 }, boxWidth: 18, boxHeight: 0 } },
+              legend: legend(),
               tooltip: { enabled: false },
             },
             scales: {
-              x: {
-                type: 'linear', min: -RANGE, max: RANGE,
-                ticks: { color: '#7a5a3a' },
-                grid: { color: '#2e1508' },
-                border: { color: '#3a1a0a' },
-                title: { display: true, text: 'x', color: '#7a5a3a' },
-              },
-              y: {
-                min: 0,
-                suggestedMax: 0.6,
-                ticks: { color: '#7a5a3a' },
-                grid: { color: '#2e1508' },
-                border: { color: '#3a1a0a' },
-                title: { display: true, text: 'f(x|Y=y)', color: '#7a5a3a' },
-              },
+              x: axis({ type: 'linear', min: -RANGE, max: RANGE, title: { display: true, text: 'x', color: COLORS.pottersClay } }),
+              y: axis({ min: 0, suggestedMax: 0.6, title: { display: true, text: 'f(x|Y=y)', color: COLORS.pottersClay } }),
             },
           },
         });

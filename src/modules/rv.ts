@@ -1,7 +1,7 @@
 // rv page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
-import { makeScriptableGrad } from './shared/chart';
+import { makeScriptableGrad, COLORS, axis, legend } from './shared/chart';
 import { initHDPI, createStripePattern } from './shared/canvas';
 import { normalPdf, boxMuller } from './shared/stats';
 
@@ -429,17 +429,17 @@ export default (Alpine: Alpine) => {
 
         if (needsRebuild) {
           if (rvChart) { rvChart.destroy(); rvChart = null; }
-          const stripes = createStripePattern('#f0d8a8');
+          const stripes = createStripePattern(COLORS.colonial);
           rvChart = new Chart(canvas, {
             type: 'bar',
-            data: { labels: ks, datasets: [{ type: 'bar', label: 'PMF', data: vals, backgroundColor: stripes, borderColor: '#f0d8a8', borderWidth: 1, barPercentage: 0.6, categoryPercentage: 0.6, borderRadius: 1 }] },
+            data: { labels: ks, datasets: [{ type: 'bar', label: 'PMF', data: vals, backgroundColor: stripes, borderColor: COLORS.colonial, borderWidth: 1, barPercentage: 0.6, categoryPercentage: 0.6, borderRadius: 1 }] },
             options: {
               animation: { duration: 250, easing: 'easeOutQuart' as const },
               responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
               plugins: { legend: { display: false }, tooltip: { enabled: false } },
               scales: {
-                x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a', stepSize: (xMax - xMin) <= 20 ? 1 : undefined }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'k', color: '#7a5a3a' } },
-                y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'ℙ(X=k)', color: '#7a5a3a' } },
+                x: axis({ type: 'linear', min: xMin, max: xMax, ticks: { color: COLORS.pottersClay, stepSize: (xMax - xMin) <= 20 ? 1 : undefined }, title: { display: true, text: 'k', color: COLORS.pottersClay } }),
+                y: axis({ min: 0, title: { display: true, text: 'ℙ(X=k)', color: COLORS.pottersClay } }),
               },
             },
           });
@@ -469,14 +469,14 @@ export default (Alpine: Alpine) => {
           if (rvChart) { rvChart.destroy(); rvChart = null; }
           rvChart = new Chart(canvas, {
             type: 'line',
-            data: { datasets: [{ label: 'PDF', data, borderColor: '#90b878', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: makeScriptableGrad('#90b878', 0.3, 0.01), tension: 0.3 }] },
+            data: { datasets: [{ label: 'PDF', data, borderColor: COLORS.olivine, borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: makeScriptableGrad(COLORS.olivine, 0.3, 0.01), tension: 0.3 }] },
             options: {
               animation: { duration: 250, easing: 'easeOutQuart' as const },
               responsive: true, maintainAspectRatio: true, aspectRatio: 2.4,
               plugins: { legend: { display: false }, tooltip: { enabled: false } },
               scales: {
-                x: { type: 'linear', min: xMin, max: xMax, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'x', color: '#7a5a3a' } },
-                y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'f(x)', color: '#7a5a3a' } },
+                x: axis({ type: 'linear', min: xMin, max: xMax, title: { display: true, text: 'x', color: COLORS.pottersClay } }),
+                y: axis({ min: 0, title: { display: true, text: 'f(x)', color: COLORS.pottersClay } }),
               },
             },
           });

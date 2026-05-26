@@ -1,7 +1,7 @@
 // convolution page
 import type { Alpine } from 'alpinejs';
 import { Chart } from 'chart.js';
-import { makeScriptableGrad } from './shared/chart';
+import { makeScriptableGrad, COLORS, axis, legend } from './shared/chart';
 
 export default function (Alpine: Alpine) {
   Alpine.data('convolutionViz', () => {
@@ -51,20 +51,20 @@ export default function (Alpine: Alpine) {
         type: 'line',
         data: {
           datasets: [
-            { label: 'f(x)', data: [], borderColor: '#f0d8a8', borderWidth: 2, pointRadius: 0, fill: false, tension: 0 },
-            { label: 'g(z−x)', data: [], borderColor: '#f07858', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(240,120,88,0.15)', tension: 0 },
+            { label: 'f(x)', data: [], borderColor: COLORS.colonial, borderWidth: 2, pointRadius: 0, fill: false, tension: 0 },
+            { label: 'g(z−x)', data: [], borderColor: COLORS.sienna, borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(240,120,88,0.15)', tension: 0 },
             { label: 'overlap', data: [], borderColor: 'rgba(144,184,120,0.4)', borderWidth: 0, pointRadius: 0, fill: true, backgroundColor: 'rgba(144,184,120,0.3)', tension: 0 },
           ],
         },
         options: {
           animation: false, responsive: true, maintainAspectRatio: true, aspectRatio: 2.8,
           plugins: {
-            legend: { display: true, labels: { color: '#b89470', font: { size: 11 }, boxWidth: 18, boxHeight: 0 } },
+            legend: legend(),
             tooltip: { enabled: false },
           },
           scales: {
-            x: { type: 'linear', min: X_MIN, max: X_MAX, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'x', color: '#7a5a3a' } },
-            y: { min: 0, max: 1.5, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' } },
+            x: axis({ type: 'linear', min: X_MIN, max: X_MAX, title: { display: true, text: 'x', color: COLORS.pottersClay } }),
+            y: axis({ min: 0, max: 1.5 }),
           },
         },
       });
@@ -83,7 +83,7 @@ export default function (Alpine: Alpine) {
           datasets: [{
             label: '(f * g)(z)',
             data: [],
-            borderColor: '#90b878',
+            borderColor: COLORS.olivine,
             borderWidth: 2,
             pointRadius: 0,
             fill: true,
@@ -94,12 +94,12 @@ export default function (Alpine: Alpine) {
         options: {
           animation: false, responsive: true, maintainAspectRatio: true, aspectRatio: 2.8,
           plugins: {
-            legend: { display: true, labels: { color: '#b89470', font: { size: 11 }, boxWidth: 18, boxHeight: 0 } },
+            legend: legend(),
             tooltip: { enabled: false },
           },
           scales: {
-            x: { type: 'linear', min: X_MIN, max: X_MAX, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: 'z', color: '#7a5a3a' } },
-            y: { min: 0, ticks: { color: '#7a5a3a' }, grid: { color: '#2e1508' }, border: { color: '#3a1a0a' }, title: { display: true, text: '(f * g)(z)', color: '#7a5a3a' } },
+            x: axis({ type: 'linear', min: X_MIN, max: X_MAX, title: { display: true, text: 'z', color: COLORS.pottersClay } }),
+            y: axis({ min: 0, title: { display: true, text: '(f * g)(z)', color: COLORS.pottersClay } }),
           },
         },
       });
