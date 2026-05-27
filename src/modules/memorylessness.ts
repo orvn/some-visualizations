@@ -36,18 +36,64 @@ export default function (Alpine: Alpine) {
       const ctx = timelineCtx;
       const W = timelineCanvas.getBoundingClientRect().width;
       const H = timelineCanvas.getBoundingClientRect().height;
-      const pad = { left: 40, right: 20, top: 20, bottom: 25 };
+      const pad = { left: 40, right: 20, top: 10, bottom: 25 };
       const plotW = W - pad.left - pad.right;
-      const axisY = pad.top + (H - pad.top - pad.bottom) / 2;
+      const axisY = H - pad.bottom - 20;
+      const waveH = axisY - pad.top - 20;
 
       ctx.clearRect(0, 0, W * 3, H * 3);
 
       // highlight region past s
       const sX = pad.left + (s / MAX_TIME) * plotW;
-      ctx.fillStyle = alpha(COLORS.sienna, 0.08);
-      ctx.fillRect(sX, pad.top, pad.left + plotW - sX, H - pad.top - pad.bottom);
+      ctx.fillStyle = alpha(COLORS.sienna, 0.06);
+      ctx.fillRect(sX, pad.top, pad.left + plotW - sX, axisY - pad.top + 15);
 
-      // axis
+      // exponential decay waves above the axis
+      const segments = [0, ...arrivals, MAX_TIME];
+      for (let i = 0; i < segments.length - 1; i++) {
+        const tStart = segments[i]!;
+        const tEnd = segments[i + 1]!;
+        const gap = tEnd - tStart;
+        if (gap < 0.05) continue;
+        const x0 = pad.left + (tStart / MAX_TIME) * plotW;
+        const xEnd = pad.left + (tEnd / MAX_TIME) * plotW;
+        const past = tStart >= s;
+
+        // draw filled area under the curve
+        ctx.beginPath();
+        const steps = Math.max(Math.floor((xEnd - x0) / 1.5), 20);
+        for (let j = 0; j <= steps; j++) {
+          const frac = j / steps;
+          const t = frac * gap;
+          const normV = 1 - Math.exp(-lam * t);
+          const px = x0 + frac * (xEnd - x0);
+          const py = axisY - 4 - normV * waveH;
+          if (j === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.lineTo(xEnd, axisY - 4);
+        ctx.lineTo(x0, axisY - 4);
+        ctx.closePath();
+        ctx.fillStyle = past ? alpha(COLORS.sienna, 0.08) : alpha(COLORS.colonial, 0.06);
+        ctx.fill();
+
+        // draw the curve stroke
+        ctx.beginPath();
+        for (let j = 0; j <= steps; j++) {
+          const frac = j / steps;
+          const t = frac * gap;
+          const normV = 1 - Math.exp(-lam * t);
+          const px = x0 + frac * (xEnd - x0);
+          const py = axisY - 4 - normV * waveH;
+          if (j === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = past ? alpha(COLORS.sienna, 0.55) : alpha(COLORS.colonial, 0.35);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // axis line
       ctx.strokeStyle = COLORS.bronze;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -65,58 +111,49 @@ export default function (Alpine: Alpine) {
         ctx.moveTo(x, axisY - 3);
         ctx.lineTo(x, axisY + 3);
         ctx.stroke();
-        ctx.fillText(String(t), x, axisY + 16);
+        ctx.fillText(String(t), x, axisY + 14);
       }
 
-      // arrival markers
+      // arrival markers on the axis
       arrivals.forEach((t) => {
         const x = pad.left + (t / MAX_TIME) * plotW;
         const past = t > s;
-        ctx.strokeStyle = past ? COLORS.sienna : COLORS.teak;
-        ctx.lineWidth = past ? 1.5 : 1;
-        ctx.beginPath();
-        ctx.moveTo(x, axisY - 10);
-        ctx.lineTo(x, axisY + 10);
-        ctx.stroke();
         ctx.fillStyle = past ? COLORS.sienna : COLORS.teak;
         ctx.beginPath();
-        ctx.arc(x, axisY, 2.5, 0, Math.PI * 2);
+        ctx.arc(x, axisY, 3, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // interarrival gaps
-      ctx.fillStyle = COLORS.pottersClay;
+      // interarrival gap labels
+      ctx.fillStyle = alpha(COLORS.pottersClay, 0.7);
       ctx.font = '9px ui-monospace, monospace';
+      ctx.textAlign = 'center';
       for (let i = 0; i < arrivals.length; i++) {
         const prev = i === 0 ? 0 : arrivals[i - 1]!;
         const curr = arrivals[i]!;
         const gap = curr - prev;
         const startX = pad.left + (prev / MAX_TIME) * plotW;
         const endX = pad.left + (curr / MAX_TIME) * plotW;
-        if (endX - startX > 25) {
-          ctx.fillText(gap.toFixed(1), (startX + endX) / 2, axisY - 14);
+        if (endX - startX > 30) {
+          ctx.fillText(gap.toFixed(1), (startX + endX) / 2, axisY - 8);
         }
       }
 
-      // s marker (draggable indicator)
+      // s marker
       ctx.strokeStyle = COLORS.colonial;
       ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
       ctx.beginPath();
       ctx.moveTo(sX, pad.top);
-      ctx.lineTo(sX, H - pad.bottom);
+      ctx.lineTo(sX, axisY + 5);
       ctx.stroke();
+      ctx.setLineDash([]);
 
       // s label
       ctx.fillStyle = COLORS.colonial;
       ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`s = ${s.toFixed(1)}`, sX, pad.top - 6);
-
-      // legend labels
-      ctx.fillStyle = COLORS.pottersClay;
-      ctx.font = '10px system-ui, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`λ = ${lam.toFixed(1)}`, pad.left, pad.top - 6);
+      ctx.fillText(`s = ${s.toFixed(1)}`, sX, pad.top + 12);
     }
 
     function pdfData(lam: number, maxX: number): { x: number; y: number }[] {

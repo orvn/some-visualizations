@@ -13,6 +13,7 @@ import confidence from './modules/confidence';
 import covariance from './modules/covariance';
 import randomIncidence from './modules/random-incidence';
 import poisson from './modules/poisson';
+import memorylessness from './modules/memorylessness';
 
 export default (Alpine: Alpine) => {
   normalVariance(Alpine);
@@ -28,4 +29,5 @@ export default (Alpine: Alpine) => {
   covariance(Alpine);
   randomIncidence(Alpine);
   poisson(Alpine);
+  memorylessness(Alpine);
 };
