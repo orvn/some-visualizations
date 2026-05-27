@@ -1,0 +1,132 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('memorylessness');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/concept/memorylessness',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="memorylessness">
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header">
+          <p class="card-label">Arrival timeline</p>
+          <button class="button-viz" x-on:click="resample()">Resample</button>
+        </div>
+        <canvas id="ml-timeline" class="timeline-canvas"></canvas>
+
+        <div class="slider-row">
+          <span class="slider-label">λ</span>
+          <input type="range" min="0.2" max="4" step="0.1"
+                 x-model="lambda"
+                 x-on:input="onLambdaChange()" />
+          <span class="slider-val" x-text="'λ = ' + parseFloat(lambda).toFixed(1)"></span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">s</span>
+          <input type="range" min="0" max="18" step="0.1"
+                 x-model="s"
+                 x-on:input="onSChange()" />
+          <span class="slider-val" x-text="'s = ' + parseFloat(s).toFixed(1)"></span>
+        </div>
+
+        <p class="stat-line" x-text="info">&nbsp;</p>
+      </div>
+
+      <div class="pdf-row">
+        <div class="card pdf-card">
+          <p class="card-label">Unconditional PDF</p>
+          <canvas id="ml-unconditional"></canvas>
+        </div>
+        <div class="card pdf-card">
+          <p class="card-label">Conditional PDF given X > s</p>
+          <canvas id="ml-conditional"></canvas>
+        </div>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key ideas</p>
+        <ul>
+          <li><strong>Memorylessness</strong> means the conditional distribution of remaining wait time, given you've already waited s units, is identical to the original distribution. The past gives zero information about the future</li>
+          <li><strong>Only the exponential</strong> has this property among continuous distributions (the geometric has it among discrete ones). Any other distribution's conditional PDF changes shape as s increases</li>
+          <li><strong>Both PDFs above are identical</strong> regardless of s. This isn't an approximation — it's an exact algebraic property: f(t | X > s) = λe<sup>−λt</sup> for all s ≥ 0</li>
+          <li><strong>Practical consequence</strong> if arrivals follow a Poisson process, knowing that no bus has come in the last 20 minutes doesn't make one more likely to arrive soon. The expected remaining wait is always 1/λ</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .timeline-canvas {
+    height: 13rem;
+  }
+
+  .slider-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--teak);
+    min-width: 1rem;
+    font-style: italic;
+  }
+
+  .slider-val {
+    min-width: 4.5rem;
+  }
+
+  .stat-line {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--potters-clay);
+    margin-top: 0.5rem;
+  }
+
+  .pdf-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .pdf-card {
+    padding: 1rem;
+  }
+
+  .pdf-card .card-label {
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 40em) {
+    .pdf-row {
+      grid-template-columns: 1fr;
+    }
+
+    .timeline-canvas {
+      height: 10rem;
+    }
+  }
+</style>
