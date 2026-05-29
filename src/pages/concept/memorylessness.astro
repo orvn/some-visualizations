@@ -40,7 +40,7 @@ const jsonLD = {
         <canvas id="ml-timeline" class="timeline-canvas"></canvas>
 
         <div class="slider-row">
-          <span class="slider-label">λ</span>
+          <span class="slider-label">$\lambda$</span>
           <input type="range" min="0.2" max="4" step="0.1"
                  x-model="lambda"
                  x-on:input="onLambdaChange()" />
@@ -73,8 +73,8 @@ const jsonLD = {
         <ul>
           <li><strong>Memorylessness</strong> means the conditional distribution of remaining wait time, given you've already waited s units, is identical to the original distribution. The past gives zero information about the future</li>
           <li><strong>Only the exponential</strong> has this property among continuous distributions (the geometric has it among discrete ones). Any other distribution's conditional PDF changes shape as s increases</li>
-          <li><strong>Both PDFs above are identical</strong> regardless of s. This isn't an approximation — it's an exact algebraic property: f(t | X > s) = λe<sup>−λt</sup> for all s ≥ 0</li>
-          <li><strong>Practical consequence</strong> if arrivals follow a Poisson process, knowing that no bus has come in the last 20 minutes doesn't make one more likely to arrive soon. The expected remaining wait is always 1/λ</li>
+          <li>{"<strong>Both PDFs above are identical</strong> regardless of s. This isn't an approximation — it's an exact algebraic property: $f(t \\mid X > s) = \\lambda e^{-\\lambda t}$ for all $s \\geq 0$"}</li>
+          <li>{"<strong>Practical consequence</strong> if arrivals follow a Poisson process, knowing that no bus has come in the last 20 minutes doesn't make one more likely to arrive soon. The expected remaining wait is always $1/\\lambda$"}</li>
         </ul>
       </div>
     </div>

@@ -61,7 +61,7 @@ const jsonLD = {
             <canvas id="markov-diagram" class="diagram-canvas"></canvas>
           </div>
           <div class="steady-col">
-            <p class="card-label steady-label">Steady state <span class="pi-symbol">π</span></p>
+            <p class="card-label steady-label">Steady state <span class="pi-symbol">$\pi$</span></p>
             <div class="steady-vals">
               <template x-for="(s, i) in steadyState" x-bind:key="i">
                 <span class="steady-val" x-text="['i','j','k','l','m','n','o'][i] + ': ' + s.toFixed(3)"></span>
@@ -123,8 +123,8 @@ const jsonLD = {
         <p class="card-label">Key ideas</p>
         <ul>
           <li><strong>Markov property:</strong> the next state depends only on the current state, not the path taken to get here.</li>
-          <li><strong>Steady state πⱼ:</strong> as the walk runs, the fraction of time in each state converges to πⱼ, regardless of the starting state.</li>
-          <li><strong>Balance equations:</strong> πⱼ = Σₖ πₖ·pₖⱼ. The flow into each state equals the flow out.</li>
+          <li>{"<strong>Steady state $\\pi_j$:</strong> as the walk runs, the fraction of time in each state converges to $\\pi_j$, regardless of the starting state."}</li>
+          <li>{"<strong>Balance equations:</strong> $\\pi_j = \\sum_k \\pi_k \\cdot p_{kj}$. The flow into each state equals the flow out."}</li>
           <li><strong>Convergence requires</strong> an irreducible (single recurrent class) and aperiodic chain.</li>
         </ul>
       </div>

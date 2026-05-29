@@ -35,7 +35,7 @@ const jsonLD = {
 
       <div class="card">
         <div class="card-label-row">
-          <p class="card-label">Joint distribution (σₓ = σᵧ = 1, zero-mean)</p>
+          <p class="card-label">Joint distribution ($\sigma_x = \sigma_y = 1$, zero-mean)</p>
         </div>
 
         <div class="chart-area">
@@ -66,9 +66,9 @@ const jsonLD = {
       <div class="insight">
         <p class="card-label">Key ideas</p>
         <ul>
-          <li><strong>cov(X,Y) = 𝔼[(X−𝔼[X])·(Y−𝔼[Y])]</strong>. Positive when deviations share a sign, negative when they oppose.</li>
-          <li><strong>ρ = cov(X,Y) / σₓσᵧ</strong> is the dimensionless version, always between −1 and 1.</li>
-          <li><strong>cov(X,Y) = 0 does not imply independence.</strong> X and Y can be dependent with zero covariance (e.g., Y = X²).</li>
+          <li><strong>{"$\\text{cov}(X,Y) = \\mathbb{E}[(X-\\mathbb{E}[X])\\cdot(Y-\\mathbb{E}[Y])]$"}</strong>. Positive when deviations share a sign, negative when they oppose.</li>
+          <li><strong>{"$\\rho = \\text{cov}(X,Y) / \\sigma_x\\sigma_y$"}</strong> is the dimensionless version, always between −1 and 1.</li>
+          <li><strong>{"$\\text{cov}(X,Y) = 0$"} does not imply independence.</strong> X and Y can be dependent with zero covariance (e.g., {"$Y = X^2$"}).</li>
           <li><strong>Independence does imply zero covariance</strong>, but not the other way around.</li>
         </ul>
       </div>

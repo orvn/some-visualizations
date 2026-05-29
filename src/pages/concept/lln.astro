@@ -99,10 +99,10 @@ const jsonLD = {
       <div class="insight">
         <p class="card-label">Comparing the bounds</p>
         <ul>
-          <li><strong>Markov</strong> only uses 𝔼[X]. Loosest bound, often doesn't shrink with n for the sample mean.</li>
-          <li><strong>Chebyshev</strong> uses variance. Decays as σ²/(nε²), tighter but still polynomial.</li>
-          <li><strong>Chernoff</strong> uses bounded range. Decays as e^(-2nε²/R²), exponentially fast. Only for bounded distributions.</li>
-          <li><strong>Mₙ → μ</strong> with probability 1 as n → ∞. All bounds confirm this, at different speeds.</li>
+          <li><strong>Markov</strong> only uses {"$\\mathbb{E}[X]$"}. Loosest bound, often doesn't shrink with n for the sample mean.</li>
+          <li><strong>Chebyshev</strong> uses variance. Decays as {"$\\sigma^2 / (n\\varepsilon^2)$"}, tighter but still polynomial.</li>
+          <li><strong>Chernoff</strong> uses bounded range. Decays as {"$e^{-2n\\varepsilon^2 / R^2}$"}, exponentially fast. Only for bounded distributions.</li>
+          <li><strong>$M_n \to \mu$</strong> with probability 1 as $n \to \infty$. All bounds confirm this, at different speeds.</li>
         </ul>
       </div>
 
