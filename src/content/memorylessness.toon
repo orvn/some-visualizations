@@ -8,4 +8,4 @@ options: null
 content:
   heading: "Memorylessness"
   eyebrow: "Exponential Distribution"
-  subtitle: "ℙ(X > s + t | X > s) = ℙ(X > t) — the past tells you nothing about the future"
+  subtitle: "$\\mathbb{P}(X > s + t \\mid X > s) = \\mathbb{P}(X > t)$ — the past tells you nothing about the future"

@@ -34,7 +34,7 @@ export default function (Alpine: Alpine) {
         const points = generateBivariateNormal(rho);
 
         const covXY = rho;
-        this.info = `cov(X,Y) = ${covXY.toFixed(2)}   ρ = ${rho.toFixed(2)}   𝔼[XY] = ${covXY.toFixed(2)}`;
+        this.info = `$\\text{cov}(X,Y) = ${covXY.toFixed(2)}$ $\\quad \\rho = ${rho.toFixed(2)}$ $\\quad \\mathbb{E}[XY] = ${covXY.toFixed(2)}$`;
 
         const colonial = [240, 216, 168];
         const olivine = [144, 184, 120];

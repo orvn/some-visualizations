@@ -261,7 +261,7 @@ export default function (Alpine: Alpine) {
         const s = parseFloat(this.s) || 3;
         const pSurvive = Math.exp(-lam * s);
         const condMean = 1 / lam;
-        this.info = `ℙ(X > ${s.toFixed(1)}) = ${pSurvive.toFixed(4)}   𝔼[remaining] = 1/λ = ${condMean.toFixed(2)}   (same as unconditional mean)`;
+        this.info = `$\\mathbb{P}(X > ${s.toFixed(1)}) = ${pSurvive.toFixed(4)}$ $\\quad \\mathbb{E}[\\text{remaining}] = 1/\\lambda = ${condMean.toFixed(2)}$ (same as unconditional mean)`;
       },
     };
   });
