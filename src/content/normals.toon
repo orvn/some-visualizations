@@ -8,4 +8,4 @@ options: null
 content:
   heading: "Normal Distribution & Variance"
   eyebrow: Probability
-  subtitle: "Variance (σ²) controls how spread out values fall around the mean (μ = 0)"
+  subtitle: "Variance ($\\sigma^2$) controls how spread out values fall around the mean ($\\mu = 0$)"

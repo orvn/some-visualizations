@@ -46,7 +46,7 @@ const jsonLD = {
           />
         </div>
 
-        <p class="card-label">Flip and slide: f(x) and g(z−x)</p>
+        <p class="card-label">Flip and slide: {"$f(x)$"} and {"$g(z - x)$"}</p>
         <canvas id="conv-chart"></canvas>
 
         <div class="slider-row">
@@ -68,10 +68,10 @@ const jsonLD = {
       <div class="insight">
         <p class="card-label">How it works</p>
         <ul>
-          <li><strong>f * g(z) = ∫ f(x)·g(z−x) dx</strong>. Flip g, slide it by z, multiply with f, and integrate the overlap.</li>
+          <li><strong>{"$(f * g)(z) = \\int f(x) \\cdot g(z - x)\\, dx$"}</strong>. Flip g, slide it by z, multiply with f, and integrate the overlap.</li>
           <li><strong>Uniform + Uniform = Triangle.</strong> The overlap area grows linearly then shrinks, forming a triangle.</li>
           <li><strong>The green area</strong> in the top chart is the integrand at each position. Its total area equals the result value at that z.</li>
-          <li><strong>Order doesn't matter:</strong> f * g = g * f. Convolution is commutative.</li>
+          <li><strong>Order doesn't matter:</strong> $f * g = g * f$. Convolution is commutative.</li>
         </ul>
       </div>
 

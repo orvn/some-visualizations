@@ -107,5 +107,14 @@ const canonicalURL = Astro.site
         }
       });
     </script>
+    <script>
+      import { renderMath } from '../lib/notation';
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => renderMath());
+      } else {
+        renderMath();
+      }
+      document.addEventListener('astro:after-swap', () => renderMath());
+    </script>
   </body>
 </html>
