@@ -1,0 +1,11 @@
+meta:
+  title: "Gradient Descent"
+  description: Navigate loss landscapes with adjustable learning rate. Watch gradient descent converge, oscillate, or diverge across different surface geometries.
+  og_image: /og-image.png
+
+options: null
+
+content:
+  heading: "Gradient Descent"
+  eyebrow: Optimization
+  subtitle: "Iterative parameter updates guided by the gradient of a loss function"

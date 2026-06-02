@@ -1,0 +1,194 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TabNav from '../../components/TabNav.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('gradient-descent');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/concept/gradient-descent',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="gradientDescent">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header" x-on:change="reset()">
+          <p class="card-label"><span class="label-upper">Loss function</span> L(θ)</p>
+          <div class="header-right">
+            <div class="action-buttons">
+              <button class="button-viz" x-on:click="step()" x-bind:disabled="!hasStart || diverged">Step</button>
+              <button class="button-viz" x-on:click="reset()">Reset</button>
+            </div>
+            <TabNav
+              modelField="surface"
+              options={[
+                { value: 'convex', label: 'Convex' },
+                { value: 'nonconvex', label: 'Non-convex' },
+                { value: 'multimodal', label: 'Multimodal' },
+              ]}
+            />
+          </div>
+        </div>
+        <canvas id="gd-curve" class="curve-canvas"></canvas>
+        <p class="click-hint" x-show="stepCount <= 1">Click the curve to reposition the starting point</p>
+
+        <div class="controls-row">
+          <div class="step-info">
+            <span class="step-label" x-text="'step ' + stepCount"></span>
+            <span class="theta-val" x-show="thetaDisplay" x-text="'θ = ' + thetaDisplay"></span>
+            <span class="loss-val" x-text="lossDisplay"></span>
+          </div>
+          <div class="slider-row lr-slider">
+            <span class="slider-val" x-text="'γ = ' + parseFloat(learningRate).toFixed(3)"></span>
+            <input type="range" min="0.001" max="1.0" step="0.001"
+                   x-model="learningRate" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-label">Loss over iterations</p>
+        <canvas id="gd-loss"></canvas>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key ideas</p>
+        <ul>
+          <li><strong>Gradient descent update:</strong> {"$\\hat{\\theta} = \\theta - \\gamma \\cdot \\nabla_\\theta L(x,y:\\theta)$"}. Each step moves θ opposite to the gradient of the loss function</li>
+          <li><strong>Learning rate γ controls step size.</strong> Too high and the optimizer overshoots and diverges. Too low and convergence is slow</li>
+          <li><strong>Convex loss functions</strong> have a single global minimum. Gradient descent always converges with a small enough γ</li>
+          <li><strong>Non-convex loss functions</strong> can trap the optimizer in local minima. The final result depends on the starting point</li>
+          <li><strong>The chain rule</strong> enables computing gradients through composed functions: {"$\\frac{\\partial L}{\\partial \\theta_k} = \\frac{\\partial L}{\\partial z} \\cdot \\frac{\\partial z}{\\partial \\theta_k}$"}</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .label-upper {
+    text-transform: uppercase;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .card-label {
+    margin-bottom: 0.5rem;
+  }
+
+  .curve-canvas {
+    display: block;
+    width: 100%;
+    height: 20rem;
+    cursor: crosshair;
+    margin-bottom: 0.5rem;
+  }
+
+  .click-hint {
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--potters-clay);
+    margin-bottom: 0.5rem;
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .step-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .step-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  .theta-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  .loss-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--porsche);
+  }
+
+  .lr-slider {
+    margin-top: 0;
+    flex: 0 1 14rem;
+  }
+
+  .lr-slider .slider-val {
+    min-width: 5.5rem;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 30em) {
+    .curve-canvas {
+      height: 14rem;
+    }
+
+    .controls-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .lr-slider {
+      flex: 1 1 auto;
+    }
+
+    .action-buttons {
+      justify-content: flex-end;
+    }
+  }
+</style>
