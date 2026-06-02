@@ -37,19 +37,19 @@ const jsonLD = {
       <div class="card">
         <div class="card-header" x-on:change="reset()">
           <p class="card-label"><span class="label-upper">Loss function</span> L(θ)</p>
-          <div class="header-right">
-            <div class="action-buttons">
-              <button class="button-viz" x-on:click="step()" x-bind:disabled="!hasStart || diverged">Step</button>
-              <button class="button-viz" x-on:click="reset()">Reset</button>
-            </div>
-            <TabNav
-              modelField="surface"
-              options={[
-                { value: 'convex', label: 'Convex' },
-                { value: 'nonconvex', label: 'Non-convex' },
-                { value: 'multimodal', label: 'Multimodal' },
-              ]}
-            />
+          <TabNav
+            modelField="surface"
+            options={[
+              { value: 'convex', label: 'Convex' },
+              { value: 'nonconvex', label: 'Non-convex' },
+              { value: 'multimodal', label: 'Multimodal' },
+            ]}
+          />
+        </div>
+        <div class="action-row">
+          <div class="action-buttons">
+            <button class="button-viz" x-on:click="step()" x-bind:disabled="!hasStart || diverged">Step</button>
+            <button class="button-viz" x-on:click="reset()">Reset</button>
           </div>
         </div>
         <canvas id="gd-curve" class="curve-canvas"></canvas>
@@ -100,10 +100,12 @@ const jsonLD = {
     gap: 0.5rem;
   }
 
-  .header-right {
+  .action-row {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .card-label {
@@ -165,7 +167,8 @@ const jsonLD = {
   }
 
   .lr-slider .slider-val {
-    min-width: 5.5rem;
+    min-width: 6.5rem;
+    font-weight: normal;
   }
 
   .action-buttons {

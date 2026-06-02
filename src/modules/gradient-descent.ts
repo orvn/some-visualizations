@@ -8,6 +8,7 @@ interface Surface {
   fn: (t: number) => number;
   deriv: (t: number) => number;
   range: [number, number];
+  yMax?: number;
 }
 
 const SURFACES: Record<string, Surface> = {
@@ -15,6 +16,7 @@ const SURFACES: Record<string, Surface> = {
     fn: (t) => t * t,
     deriv: (t) => 2 * t,
     range: [-5, 5],
+    yMax: 8,
   },
   nonconvex: {
     fn: (t) => t ** 4 / 20 - t * t + 5,
@@ -46,6 +48,7 @@ function computeYRange(surf: Surface): [number, number] {
     if (j < jMin) jMin = j;
     if (j > jMax) jMax = j;
   }
+  if (surf.yMax !== undefined) jMax = Math.min(jMax, surf.yMax);
   const margin = (jMax - jMin) * 0.08;
   return [Math.min(0, jMin - margin), jMax + margin];
 }
@@ -94,6 +97,16 @@ export default function (Alpine: Alpine) {
     let animStart = 0;
     let animT = 1;
     let pending: { theta: number; loss: number } | null = null;
+
+    // curve transition animation
+    let morphRaf: number | null = null;
+    let morphFrom: number[] | null = null;
+    let morphTo: number[] | null = null;
+    let morphYrFrom: [number, number] | null = null;
+    let morphYrTo: [number, number] | null = null;
+    let morphT = 1;
+    let morphStart = 0;
+    const MORPH_MS = 350;
 
     function coords(W: number, H: number, surf: Surface, yr: [number, number]) {
       const [tMin, tMax] = surf.range;
@@ -243,6 +256,53 @@ export default function (Alpine: Alpine) {
       animT = 1;
     }
 
+    function randomStart(surf: Surface): number {
+      const [tMin, tMax] = surf.range;
+      const margin = (tMax - tMin) * 0.15;
+      return tMin + margin + Math.random() * (tMax - tMin - 2 * margin);
+    }
+
+    function cancelMorph() {
+      if (morphRaf) { cancelAnimationFrame(morphRaf); morphRaf = null; }
+      morphFrom = null;
+      morphTo = null;
+      morphT = 1;
+    }
+
+    function sampleCurve(surf: Surface): number[] {
+      const [tMin, tMax] = surf.range;
+      const vals: number[] = [];
+      for (let i = 0; i <= CURVE_SAMPLES; i++) {
+        vals.push(surf.fn(tMin + (i / CURVE_SAMPLES) * (tMax - tMin)));
+      }
+      return vals;
+    }
+
+    function drawMorphedCurve(
+      c: CanvasRenderingContext2D, W: number, H: number,
+      surf: Surface, yrFrom: [number, number], yrTo: [number, number],
+      from: number[], to: number[], t: number,
+    ) {
+      const [tMin, tMax] = surf.range;
+      const jMin = yrFrom[0] + (yrTo[0] - yrFrom[0]) * t;
+      const jMax = yrFrom[1] + (yrTo[1] - yrFrom[1]) * t;
+      const pw = W - pad.left - pad.right;
+      const ph = H - pad.top - pad.bottom;
+      const toX = (th: number) => pad.left + ((th - tMin) / (tMax - tMin)) * pw;
+      const toY = (j: number) => pad.top + ph - ((j - jMin) / (jMax - jMin)) * ph;
+
+      c.beginPath();
+      for (let i = 0; i <= CURVE_SAMPLES; i++) {
+        const v = from[i]! + (to[i]! - from[i]!) * t;
+        const x = toX(tMin + (i / CURVE_SAMPLES) * (tMax - tMin));
+        const y = toY(v);
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.strokeStyle = COLORS.colonial;
+      c.lineWidth = 2;
+      c.stroke();
+    }
+
     function ensureChart(el: HTMLCanvasElement): Chart {
       if (lossChart) return lossChart;
       lossChart = new Chart(el, {
@@ -305,14 +365,39 @@ export default function (Alpine: Alpine) {
             self.render();
           });
 
-          self.placeStart(-3.5);
+          self.placeStart(randomStart(getSurface(self.surface)));
           self.render();
         });
 
+        let prevSurface = this.surface;
         this.$watch('surface', () => {
+          const oldSurf = getSurface(prevSurface);
+          const newSurf = getSurface(this.surface);
+          prevSurface = this.surface;
+
           this.resetState();
-          this.placeStart(-3.5);
-          this.render();
+          this.placeStart(randomStart(getSurface(this.surface)));
+
+          // animate curve morph
+          cancelMorph();
+          morphFrom = sampleCurve(oldSurf);
+          morphTo = sampleCurve(newSurf);
+          morphYrFrom = computeYRange(oldSurf);
+          morphYrTo = computeYRange(newSurf);
+          morphT = 0;
+          morphStart = performance.now();
+          const self = this;
+          const tick = (now: number) => {
+            morphT = Math.min((now - morphStart) / MORPH_MS, 1);
+            self.render();
+            if (morphT < 1) {
+              morphRaf = requestAnimationFrame(tick);
+            } else {
+              cancelMorph();
+              self.render();
+            }
+          };
+          morphRaf = requestAnimationFrame(tick);
         });
       },
 
@@ -334,8 +419,10 @@ export default function (Alpine: Alpine) {
       },
 
       resetState() {
-        this.stop();
-        cancelAnim();
+        this.running = false;
+        if (animRaf) { cancelAnimationFrame(animRaf); animRaf = null; }
+        pending = null;
+        animT = 1;
         this.theta = null;
         this.descentPath = [];
         this.stepCount = 0;
@@ -418,9 +505,59 @@ export default function (Alpine: Alpine) {
       },
 
       reset() {
-        this.resetState();
-        this.placeStart(-3.5);
-        this.render();
+        const surf = getSurface(this.surface);
+        const oldTheta = this.theta;
+        const newTheta = randomStart(surf);
+
+        // cancel any in-progress hop
+        this.running = false;
+        if (animRaf) { cancelAnimationFrame(animRaf); animRaf = null; }
+        pending = null;
+        animT = 1;
+
+        // clear path but keep curve
+        this.descentPath = [];
+        this.stepCount = 0;
+        this.diverged = false;
+        this.resetChart();
+
+        if (oldTheta === null) {
+          this.placeStart(newTheta);
+          this.render();
+          return;
+        }
+
+        // animate dot sliding along the curve to new position
+        const fromTheta = oldTheta;
+        const slideStart = performance.now();
+        const SLIDE_MS = 400;
+        const self = this;
+
+        this.theta = fromTheta;
+        this.descentPath = [{ theta: fromTheta, loss: surf.fn(fromTheta) }];
+        this.hasStart = true;
+
+        const tick = (now: number) => {
+          const t = Math.min((now - slideStart) / SLIDE_MS, 1);
+          const eased = easeInOut(t);
+          const curTheta = fromTheta + (newTheta - fromTheta) * eased;
+          const curLoss = surf.fn(curTheta);
+
+          self.theta = curTheta;
+          self.descentPath = [{ theta: curTheta, loss: curLoss }];
+          self.thetaDisplay = formatVal(curTheta);
+          self.lossDisplay = formatVal(curLoss);
+          self.render();
+
+          if (t < 1) {
+            animRaf = requestAnimationFrame(tick);
+          } else {
+            animRaf = null;
+            self.resetChart();
+            self.pushChart(0, curLoss);
+          }
+        };
+        animRaf = requestAnimationFrame(tick);
       },
 
       render() {
@@ -431,13 +568,24 @@ export default function (Alpine: Alpine) {
         const yr = computeYRange(surf);
 
         ctx.clearRect(0, 0, W * 3, H * 3);
-        drawAxes(ctx, W, H, surf, yr);
-        drawCurve(ctx, W, H, surf, yr);
-        drawPath(ctx, W, H, surf, yr, this.descentPath, !pending);
 
-        if (pending && this.descentPath.length > 0) {
-          const from = this.descentPath[this.descentPath.length - 1]!;
-          drawHop(ctx, W, H, surf, yr, from, pending, easeInOut(animT));
+        if (morphFrom && morphTo && morphYrFrom && morphYrTo && morphT < 1) {
+          const eased = easeInOut(morphT);
+          const interpYr: [number, number] = [
+            morphYrFrom[0] + (morphYrTo[0] - morphYrFrom[0]) * eased,
+            morphYrFrom[1] + (morphYrTo[1] - morphYrFrom[1]) * eased,
+          ];
+          drawAxes(ctx, W, H, surf, interpYr);
+          drawMorphedCurve(ctx, W, H, surf, morphYrFrom, morphYrTo, morphFrom, morphTo, eased);
+        } else {
+          drawAxes(ctx, W, H, surf, yr);
+          drawCurve(ctx, W, H, surf, yr);
+          drawPath(ctx, W, H, surf, yr, this.descentPath, !pending);
+
+          if (pending && this.descentPath.length > 0) {
+            const from = this.descentPath[this.descentPath.length - 1]!;
+            drawHop(ctx, W, H, surf, yr, from, pending, easeInOut(animT));
+          }
         }
       },
 
