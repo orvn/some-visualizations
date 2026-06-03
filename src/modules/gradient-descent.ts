@@ -189,15 +189,16 @@ export default function (Alpine: Alpine) {
       highlightLast: boolean,
     ) {
       if (path.length === 0) return;
-      const { toX, toY } = coords(W, H, surf, yr);
+      const { toX, toY, ph } = coords(W, H, surf, yr);
+      const clampY = (y: number) => Math.max(pad.top, Math.min(pad.top + ph, y));
 
       // arcs
       if (path.length > 1) {
         c.strokeStyle = alpha(COLORS.olivine, 0.6);
         c.lineWidth = 1.2;
         for (let i = 0; i < path.length - 1; i++) {
-          const ax = toX(path[i]!.theta), ay = toY(path[i]!.loss);
-          const bx = toX(path[i + 1]!.theta), by = toY(path[i + 1]!.loss);
+          const ax = toX(path[i]!.theta), ay = clampY(toY(path[i]!.loss));
+          const bx = toX(path[i + 1]!.theta), by = clampY(toY(path[i + 1]!.loss));
           const { cpx, cpy } = hopControl(ax, ay, bx, by);
           c.beginPath(); c.moveTo(ax, ay); c.quadraticCurveTo(cpx, cpy, bx, by); c.stroke();
         }
@@ -207,8 +208,9 @@ export default function (Alpine: Alpine) {
       for (let i = 0; i < path.length; i++) {
         const p = path[i]!;
         const hl = i === path.length - 1 && highlightLast;
+        const py = clampY(toY(p.loss));
         c.beginPath();
-        c.arc(toX(p.theta), toY(p.loss), hl ? 5 : 2.5, 0, Math.PI * 2);
+        c.arc(toX(p.theta), py, hl ? 5 : 2.5, 0, Math.PI * 2);
         c.fillStyle = hl ? COLORS.sienna : COLORS.olivine;
         c.fill();
         if (hl) { c.strokeStyle = COLORS.colonial; c.lineWidth = 1.5; c.stroke(); }
@@ -222,9 +224,10 @@ export default function (Alpine: Alpine) {
       to: { theta: number; loss: number },
       t: number,
     ) {
-      const { toX, toY } = coords(W, H, surf, yr);
-      const ax = toX(from.theta), ay = toY(from.loss);
-      const bx = toX(to.theta), by = toY(to.loss);
+      const { toX, toY, ph } = coords(W, H, surf, yr);
+      const clampY = (y: number) => Math.max(pad.top, Math.min(pad.top + ph, y));
+      const ax = toX(from.theta), ay = clampY(toY(from.loss));
+      const bx = toX(to.theta), by = clampY(toY(to.loss));
       const { cpx, cpy } = hopControl(ax, ay, bx, by);
 
       // partial arc
@@ -258,8 +261,26 @@ export default function (Alpine: Alpine) {
 
     function randomStart(surf: Surface): number {
       const [tMin, tMax] = surf.range;
-      const margin = (tMax - tMin) * 0.15;
-      return tMin + margin + Math.random() * (tMax - tMin - 2 * margin);
+      const yr = computeYRange(surf);
+      const yTop = yr[1];
+      let visMin = tMin;
+      let visMax = tMax;
+      for (let i = 0; i <= CURVE_SAMPLES; i++) {
+        const t = tMin + (i / CURVE_SAMPLES) * (tMax - tMin);
+        if (surf.fn(t) <= yTop) { visMin = t; break; }
+      }
+      for (let i = CURVE_SAMPLES; i >= 0; i--) {
+        const t = tMin + (i / CURVE_SAMPLES) * (tMax - tMin);
+        if (surf.fn(t) <= yTop) { visMax = t; break; }
+      }
+      const margin = (visMax - visMin) * 0.08;
+      // bias toward edges (higher loss) using a power curve
+      let r = Math.random();
+      r = Math.pow(r, 0.4); // skew toward 1 = edges
+      const half = (visMax - visMin - 2 * margin) / 2;
+      const mid = (visMin + visMax) / 2;
+      const side = Math.random() < 0.5 ? -1 : 1;
+      return mid + side * (margin + r * half);
     }
 
     function cancelMorph() {
@@ -320,14 +341,14 @@ export default function (Alpine: Alpine) {
           }],
         },
         options: {
-          animation: false,
+          animation: { duration: 250, easing: 'easeOutQuart' as const },
           responsive: true,
           maintainAspectRatio: true,
-          aspectRatio: 2.5,
+          aspectRatio: 1.4,
           plugins: { legend: { display: false }, tooltip: { enabled: false } },
           scales: {
-            x: { ...axis(), type: 'linear' as const, title: { display: true, text: 'iteration', color: COLORS.pottersClay } },
-            y: { ...axis(), title: { display: true, text: 'L(θ)', color: COLORS.pottersClay }, min: 0 },
+            x: { ...axis(), type: 'linear' as const, ticks: { display: false }, grid: { display: false } },
+            y: { ...axis(), ticks: { display: false }, grid: { display: false }, min: 0 },
           },
         },
       });
@@ -336,7 +357,7 @@ export default function (Alpine: Alpine) {
 
     return {
       surface: 'convex',
-      learningRate: '0.05',
+      learningRate: '0.25',
       running: false,
       stepCount: 0,
       thetaDisplay: '',
@@ -603,7 +624,7 @@ export default function (Alpine: Alpine) {
         const chart = ensureChart(el);
         (chart.data.labels as number[]).push(idx);
         (chart.data.datasets[0]!.data as number[]).push(Math.min(loss, 1e4));
-        chart.update('none');
+        chart.update();
       },
     };
   });
