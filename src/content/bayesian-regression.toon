@@ -1,0 +1,11 @@
+meta:
+  title: "Bayesian Linear Regression"
+  description: Click to add data points and watch a family of regression lines converge as the posterior distribution narrows with each observation.
+  og_image: /og-image.png
+
+options: null
+
+content:
+  heading: "Bayesian Linear Regression"
+  eyebrow: Inference
+  subtitle: "Updating beliefs about a linear relationship as data arrives"

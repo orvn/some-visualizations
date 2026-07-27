@@ -1,0 +1,148 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('bayesian-regression');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/concept/bayesian-regression',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="bayesianRegression">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header">
+          <p class="card-label">Posterior regression lines</p>
+          <button class="button-viz" x-on:click="reset()">Reset</button>
+        </div>
+        <canvas id="br-plot" class="plot-canvas"></canvas>
+
+        <div class="bottom-row">
+          <div class="bottom-left">
+            <p class="click-hint">Click to add data points</p>
+            <div class="slider-row">
+              <span class="slider-val" x-text="'σ prior = ' + parseFloat(priorWidth).toFixed(1)"></span>
+              <input type="range" min="0.3" max="3" step="0.1"
+                     x-model="priorWidth" />
+            </div>
+            <div class="slider-row">
+              <span class="slider-val" x-text="'σ noise = ' + parseFloat(noiseLevel).toFixed(1)"></span>
+              <input type="range" min="0.2" max="3" step="0.1"
+                     x-model="noiseLevel" />
+            </div>
+          </div>
+          <div class="stats">
+            <span class="stat-line" x-text="pointCount + ' points'"></span>
+            <span class="stat-line" x-show="slopeDisplay" x-text="'slope = ' + slopeDisplay"></span>
+            <span class="stat-line" x-show="interceptDisplay" x-text="'intercept = ' + interceptDisplay"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key ideas</p>
+        <ul>
+          <li><strong>The prior</strong> encodes initial uncertainty. With no data, the sampled lines spread widely — any slope and intercept is plausible</li>
+          <li><strong>Each data point</strong> updates the posterior via Bayes' rule: {"$p(\\theta \\mid D) \\propto p(D \\mid \\theta)\\, p(\\theta)$"}. The lines converge toward the data</li>
+          <li><strong>Posterior variance shrinks</strong> with more observations. The conjugate normal model gives a closed-form update: {"$\\Sigma_n^{-1} = \\Sigma_0^{-1} + \\frac{1}{\\sigma^2} X^\\top X$"}</li>
+          <li><strong>The posterior mean</strong> approaches the least-squares estimate as data grows, but the Bayesian view also quantifies remaining uncertainty</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .card-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .card-label {
+    margin-bottom: 0.5rem;
+  }
+
+  .plot-canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    max-height: 28rem;
+    cursor: crosshair;
+    margin-bottom: 0.5rem;
+  }
+
+  .bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 0.25rem;
+  }
+
+  .bottom-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    flex: 1;
+  }
+
+  .click-hint {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--potters-clay);
+  }
+
+  .slider-val {
+    min-width: 7rem;
+    font-weight: normal;
+  }
+
+  .stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    padding-top: 0.125rem;
+  }
+
+  .stat-line {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  @media (max-width: 30em) {
+    .plot-canvas {
+      max-height: 20rem;
+    }
+
+    .bottom-row {
+      flex-direction: column;
+    }
+  }
+</style>
