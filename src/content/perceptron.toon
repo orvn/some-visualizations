@@ -8,4 +8,4 @@ options: null
 content:
   heading: "The Perceptron"
   eyebrow: Classification
-  subtitle: "The first learning algorithm — θ rotates to find a separating hyperplane"
+  subtitle: "The first learning algorithm: θ rotates to find a separating hyperplane"

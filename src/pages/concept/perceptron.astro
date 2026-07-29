@@ -41,6 +41,7 @@ const jsonLD = {
             modelField="dataset"
             options={[
               { value: 'separable', label: 'Separable' },
+              { value: 'nonseparable', label: 'Not separable' },
               { value: 'blank', label: 'Blank' },
             ]}
           />
@@ -64,6 +65,11 @@ const jsonLD = {
               <span x-text="running ? 'Pause' : 'Run'"></span>
             </button>
             <button class="button-viz" x-on:click="reset()">Reset</button>
+            <button class="button-viz" x-on:click="randomize()"
+              x-bind:disabled="dataset === 'blank'"
+              title="Regenerate this dataset with a new random seed">
+              <span class="step-icon randomize-icon">&#8635;</span> New
+            </button>
           </div>
         </div>
 
@@ -201,6 +207,13 @@ const jsonLD = {
     position: relative;
     top: -0.05rem;
     margin-left: 0.25rem;
+  }
+
+  .randomize-icon {
+    font-size: 1em;
+    margin-left: 0;
+    margin-right: 0.25rem;
+    top: 0.05rem;
   }
 
   .label-toggle {

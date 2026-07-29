@@ -24,10 +24,10 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function makeSeparablePreset(): Pt[] {
-  const rng = mulberry32(1337);
+function makeSeparable(seed: number): Pt[] {
+  const rng = mulberry32(seed);
   const pts: Pt[] = [];
-  const ang = -Math.PI / 6;
+  const ang = -Math.PI / 6 + (rng() - 0.5) * 0.6;
   const dx = Math.cos(ang), dy = Math.sin(ang);
   const nx = -dy, ny = dx;
   const N_PER = 26;
@@ -52,10 +52,62 @@ function makeSeparablePreset(): Pt[] {
   return pts;
 }
 
-const PRESETS: Record<string, Pt[]> = {
-  separable: makeSeparablePreset(),
-  blank: [],
+function makeNonseparable(seed: number): Pt[] {
+  const rng = mulberry32(seed);
+  const pts: Pt[] = [];
+  const rot = (rng() - 0.5) * 0.6;
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const clusters: Array<{ cx: number; cy: number; lbl: 1 | -1 }> = [
+    { cx: -2.5, cy: 2.5, lbl: 1 },
+    { cx: 2.5, cy: -2.5, lbl: 1 },
+    { cx: -2.5, cy: -2.5, lbl: -1 },
+    { cx: 2.5, cy: 2.5, lbl: -1 },
+  ];
+  const N_PER_CLUSTER = 12;
+  for (const c of clusters) {
+    const rx = c.cx * cs - c.cy * sn;
+    const ry = c.cx * sn + c.cy * cs;
+    for (let i = 0; i < N_PER_CLUSTER; i++) {
+      const angle = rng() * Math.PI * 2;
+      const radius = Math.sqrt(rng()) * 1.1;
+      pts.push({
+        x: rx + radius * Math.cos(angle),
+        y: ry + radius * Math.sin(angle),
+        label: c.lbl,
+      });
+    }
+  }
+  return pts;
+}
+
+function generatePreset(name: string, seed: number): Pt[] {
+  if (name === 'separable') return makeSeparable(seed);
+  if (name === 'nonseparable') return makeNonseparable(seed);
+  return [];
+}
+
+const DEFAULT_SEEDS: Record<string, number> = {
+  separable: 1337,
+  nonseparable: 4242,
+  blank: 0,
 };
+
+function lightenHex(hex: string, amt: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const R = Math.min(255, Math.round(r + amt * (255 - r)));
+  const G = Math.min(255, Math.round(g + amt * (255 - g)));
+  const B = Math.min(255, Math.round(b + amt * (255 - b)));
+  return `rgb(${R}, ${G}, ${B})`;
+}
+
+function darkenHex(hex: string, amt: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${Math.round(r * (1 - amt))}, ${Math.round(g * (1 - amt))}, ${Math.round(b * (1 - amt))})`;
+}
 
 function classify(p: Pt, b: Boundary): number {
   return p.label * (b.t1 * p.x + b.t2 * p.y + b.t0);
@@ -252,17 +304,26 @@ export default function (Alpine: Alpine) {
 
     function drawBoundaryGlow(
       c: CanvasRenderingContext2D, W: number, H: number,
-      b: Boundary, color: string,
+      b: Boundary, color: string, marginExtent: number,
     ) {
       const seg = boundarySegment(b);
       if (!seg) return;
       const { pw, ph, toX, toY } = makeCoords(W, H);
+      const pxPerUnit = (pw / (2 * RANGE) + ph / (2 * RANGE)) / 2;
+      const marginPx = Math.max(6, marginExtent * pxPerUnit);
+
       c.save();
       c.beginPath();
       c.rect(pad.left, pad.top, pw, ph);
       c.clip();
       c.lineCap = 'round';
-      const passes: Array<[number, number]> = [[11, 0.06], [6, 0.15], [2.4, 1]];
+
+      const passes: Array<[number, number]> = [
+        [marginPx * 2.2, 0.05],
+        [marginPx * 1.4, 0.11],
+        [marginPx * 0.7, 0.22],
+        [2.2, 1.0],
+      ];
       for (const [w, a] of passes) {
         c.beginPath();
         c.moveTo(toX(seg[0][0]), toY(seg[0][1]));
@@ -274,70 +335,194 @@ export default function (Alpine: Alpine) {
       c.restore();
     }
 
-    function drawMarginHalo(
-      c: CanvasRenderingContext2D, W: number, H: number,
-      b: Boundary, color: string, extent: number, peakAlpha: number,
-    ) {
-      const seg = boundarySegment(b);
-      if (!seg) return;
+    type ArrowGeom = {
+      sx: number; sy: number;
+      nPxX: number; nPxY: number;
+      bDirX: number; bDirY: number;
+      pxPerUnit: number;
+    };
+
+    function computeArrowGeom(W: number, H: number, b: Boundary): ArrowGeom | null {
+      const { t1, t2 } = b;
+      const norm = Math.hypot(t1, t2);
+      if (norm < 1e-9) return null;
       const { pw, ph, toX, toY } = makeCoords(W, H);
-      const norm = Math.hypot(b.t1, b.t2);
-      if (norm < 1e-9) return;
-      const nx = b.t1 / norm, ny = b.t2 / norm;
-      const mx = (seg[0][0] + seg[1][0]) / 2;
-      const my = (seg[0][1] + seg[1][1]) / 2;
-      const p1x = mx - nx * extent;
-      const p1y = my - ny * extent;
-      const p2x = mx + nx * extent;
-      const p2y = my + ny * extent;
+      const seg = boundarySegment(b);
+      if (!seg) return null;
+      const bpx1 = toX(seg[0][0]);
+      const bpy1 = toY(seg[0][1]);
+      const bpx2 = toX(seg[1][0]);
+      const bpy2 = toY(seg[1][1]);
+      const bdx = bpx2 - bpx1;
+      const bdy = bpy2 - bpy1;
+      const blen = Math.hypot(bdx, bdy);
+      if (blen < 1) return null;
 
-      const grad = c.createLinearGradient(toX(p1x), toY(p1y), toX(p2x), toY(p2y));
-      grad.addColorStop(0, alpha(color, 0));
-      grad.addColorStop(0.5, alpha(color, peakAlpha));
-      grad.addColorStop(1, alpha(color, 0));
-
-      c.save();
-      c.beginPath();
-      c.rect(pad.left, pad.top, pw, ph);
-      c.clip();
-      c.fillStyle = grad;
-      c.fillRect(pad.left, pad.top, pw, ph);
-      c.restore();
+      const thetaPxX = (t1 / norm) * (pw / (2 * RANGE));
+      const thetaPxY = -(t2 / norm) * (ph / (2 * RANGE));
+      const c1x = -bdy / blen, c1y = bdx / blen;
+      const c2x = bdy / blen, c2y = -bdx / blen;
+      const useC1 = c1x * thetaPxX + c1y * thetaPxY >= c2x * thetaPxX + c2y * thetaPxY;
+      return {
+        sx: (bpx1 + bpx2) / 2,
+        sy: (bpy1 + bpy2) / 2,
+        nPxX: useC1 ? c1x : c2x,
+        nPxY: useC1 ? c1y : c2y,
+        bDirX: bdx / blen,
+        bDirY: bdy / blen,
+        pxPerUnit: (pw / (2 * RANGE) + ph / (2 * RANGE)) / 2,
+      };
     }
 
-    function drawNormalArrow(c: CanvasRenderingContext2D, W: number, H: number, b: Boundary) {
-      const { t1, t2, t0 } = b;
-      const norm = Math.hypot(t1, t2);
-      if (norm < 1e-9) return;
-      const { toX, toY, pw, ph } = makeCoords(W, H);
-      const x0 = -t0 * t1 / (norm * norm);
-      const y0 = -t0 * t2 / (norm * norm);
-      const len = 0.9;
-      const ex = x0 + (t1 / norm) * len;
-      const ey = y0 + (t2 / norm) * len;
+    function drawNormalArrow(
+      c: CanvasRenderingContext2D, W: number, H: number,
+      b: Boundary, marginExtent: number, showAnnotations: boolean,
+    ) {
+      const g = computeArrowGeom(W, H, b);
+      if (!g) return;
+      const { pw, ph } = makeCoords(W, H);
+      const { sx, sy, nPxX, nPxY, bDirX, bDirY, pxPerUnit } = g;
+
+      const marginPx = marginExtent * pxPerUnit;
+      const arrowLen = Math.min(120, Math.max(60, marginPx + 26));
+      const ex = sx + nPxX * arrowLen;
+      const ey = sy + nPxY * arrowLen;
 
       c.save();
       c.beginPath();
       c.rect(pad.left, pad.top, pw, ph);
       c.clip();
 
-      c.strokeStyle = alpha(COLORS.porsche, 0.85);
-      c.fillStyle = alpha(COLORS.porsche, 0.85);
+      if (showAnnotations) {
+        const sz = 9;
+        c.strokeStyle = alpha(COLORS.colonial, 0.75);
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(sx + bDirX * sz, sy + bDirY * sz);
+        c.lineTo(sx + bDirX * sz + nPxX * sz, sy + bDirY * sz + nPxY * sz);
+        c.lineTo(sx + nPxX * sz, sy + nPxY * sz);
+        c.stroke();
+      }
+
+      c.strokeStyle = alpha(COLORS.colonial, 0.95);
+      c.fillStyle = alpha(COLORS.colonial, 0.95);
       c.lineWidth = 1.5;
       c.beginPath();
-      c.moveTo(toX(x0), toY(y0));
-      c.lineTo(toX(ex), toY(ey));
+      c.moveTo(sx, sy);
+      c.lineTo(ex, ey);
       c.stroke();
 
-      const ang = Math.atan2(toY(ey) - toY(y0), toX(ex) - toX(x0));
-      const head = 6;
+      const ang = Math.atan2(ey - sy, ex - sx);
+      const head = 8;
       c.beginPath();
-      c.moveTo(toX(ex), toY(ey));
-      c.lineTo(toX(ex) - head * Math.cos(ang - Math.PI / 6), toY(ey) - head * Math.sin(ang - Math.PI / 6));
-      c.lineTo(toX(ex) - head * Math.cos(ang + Math.PI / 6), toY(ey) - head * Math.sin(ang + Math.PI / 6));
+      c.moveTo(ex, ey);
+      c.lineTo(ex - head * Math.cos(ang - Math.PI / 6), ey - head * Math.sin(ang - Math.PI / 6));
+      c.lineTo(ex - head * Math.cos(ang + Math.PI / 6), ey - head * Math.sin(ang + Math.PI / 6));
       c.closePath();
       c.fill();
 
+      if (showAnnotations) {
+        const labelOffset = 12;
+        const lx = ex + nPxX * labelOffset;
+        const ly = ey + nPxY * labelOffset;
+        c.font = 'italic 15px var(--font-display, Georgia, serif)';
+        c.fillStyle = COLORS.colonial;
+        c.textAlign = nPxX > 0.15 ? 'left' : nPxX < -0.15 ? 'right' : 'center';
+        c.textBaseline = nPxY > 0.15 ? 'top' : nPxY < -0.15 ? 'bottom' : 'middle';
+        c.fillText('θ', lx, ly);
+      }
+
+      c.restore();
+    }
+
+    function drawMarginAnnotation(c: CanvasRenderingContext2D, W: number, H: number, b: Boundary, marginExtent: number) {
+      const g = computeArrowGeom(W, H, b);
+      if (!g) return;
+      const { pw, ph } = makeCoords(W, H);
+      const { sx, sy, nPxX, nPxY, bDirX, bDirY, pxPerUnit } = g;
+
+      const marginPx = marginExtent * pxPerUnit;
+      if (marginPx < 8) return;
+
+      const tx = sx + nPxX * marginPx;
+      const ty = sy + nPxY * marginPx;
+      const tickSz = 6;
+
+      c.save();
+      c.beginPath();
+      c.rect(pad.left, pad.top, pw, ph);
+      c.clip();
+
+      c.strokeStyle = alpha(COLORS.colonial, 0.55);
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(tx - bDirX * tickSz, ty - bDirY * tickSz);
+      c.lineTo(tx + bDirX * tickSz, ty + bDirY * tickSz);
+      c.stroke();
+
+      const labelOff = 10;
+      const lx = tx + bDirX * labelOff;
+      const ly = ty + bDirY * labelOff;
+      c.font = 'italic 13px var(--font-display, Georgia, serif)';
+      c.fillStyle = alpha(COLORS.colonial, 0.85);
+      c.textAlign = bDirX > 0.15 ? 'left' : bDirX < -0.15 ? 'right' : 'center';
+      c.textBaseline = bDirY > 0.15 ? 'top' : bDirY < -0.15 ? 'bottom' : 'middle';
+      c.fillText('γ', lx, ly);
+
+      c.restore();
+    }
+
+    function drawBoundaryFormula(c: CanvasRenderingContext2D, W: number, H: number, b: Boundary) {
+      const { t1, t2, t0 } = b;
+      if (Math.hypot(t1, t2) < 1e-9) return;
+      const { pw } = makeCoords(W, H);
+
+      const fmt = (v: number) => {
+        const s = v.toFixed(1);
+        return s === '-0.0' ? '0.0' : s;
+      };
+
+      const text =
+        fmt(t1) + ' x₁'
+        + (t2 >= 0 ? ' + ' : ' − ') + fmt(Math.abs(t2)) + ' x₂'
+        + (t0 >= 0 ? ' + ' : ' − ') + fmt(Math.abs(t0))
+        + ' = 0';
+
+      c.save();
+      c.font = '11px var(--font-mono, monospace)';
+      c.textAlign = 'center';
+      c.textBaseline = 'top';
+
+      const tw = c.measureText(text).width;
+      const cx = pad.left + pw / 2;
+      const cy = pad.top + 5;
+
+      c.fillStyle = alpha(COLORS.graphite, 0.72);
+      c.fillRect(cx - tw / 2 - 7, cy - 3, tw + 14, 18);
+
+      c.fillStyle = COLORS.colonial;
+      c.fillText(text, cx, cy);
+
+      c.restore();
+    }
+
+    function drawClassCornerLabels(c: CanvasRenderingContext2D, W: number, H: number, b: Boundary) {
+      const { t1, t2 } = b;
+      if (Math.hypot(t1, t2) < 1e-9) return;
+      const { toX, toY } = makeCoords(W, H);
+      const posX = t1 >= 0 ? RANGE - 0.35 : -RANGE + 0.35;
+      const posY = t2 >= 0 ? RANGE - 0.35 : -RANGE + 0.35;
+      const negX = -posX;
+      const negY = -posY;
+
+      c.save();
+      c.font = 'bold 11px var(--font-mono, monospace)';
+      c.textBaseline = 'middle';
+      c.textAlign = 'center';
+      c.fillStyle = alpha(COLORS.olivine, 0.6);
+      c.fillText('+1', toX(posX), toY(posY));
+      c.fillStyle = alpha(COLORS.sienna, 0.6);
+      c.fillText('−1', toX(negX), toY(negY));
       c.restore();
     }
 
@@ -346,38 +531,43 @@ export default function (Alpine: Alpine) {
       points: Pt[], mistakeIdx: number | null, pulseT: number,
     ) {
       const { toX, toY } = makeCoords(W, H);
-      for (let i = 0; i < points.length; i++) {
-        const p = points[i]!;
+      const R = 6;
+
+      if (mistakeIdx !== null && pulseT < 1 && points[mistakeIdx]) {
+        const p = points[mistakeIdx]!;
         const cx = toX(p.x), cy = toY(p.y);
-        const isMistake = i === mistakeIdx;
         const posColor = p.label === 1 ? COLORS.olivine : COLORS.sienna;
-
-        if (isMistake && pulseT < 1) {
-          const eased = easeInOut(pulseT);
-          const ringR = 5 + eased * 16;
-          const ringA = (1 - eased) * 0.8;
-          c.beginPath();
-          c.arc(cx, cy, ringR, 0, Math.PI * 2);
-          c.strokeStyle = alpha(posColor, ringA);
-          c.lineWidth = 2;
-          c.stroke();
-        }
-
+        const eased = easeInOut(pulseT);
+        const ringR = R + eased * 18;
+        const ringA = (1 - eased) * 0.8;
         c.beginPath();
-        c.arc(cx, cy, 5, 0, Math.PI * 2);
-        c.fillStyle = posColor;
-        c.fill();
-        c.strokeStyle = COLORS.colonial;
-        c.lineWidth = 1;
+        c.arc(cx, cy, ringR, 0, Math.PI * 2);
+        c.strokeStyle = alpha(posColor, ringA);
+        c.lineWidth = 2;
         c.stroke();
-
-        c.fillStyle = COLORS.graphite;
-        c.font = 'bold 8px var(--font-mono, monospace)';
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.fillText(p.label === 1 ? '+' : '−', cx, cy + 0.5);
-        c.textBaseline = 'alphabetic';
       }
+
+      c.save();
+      c.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      c.shadowBlur = 4;
+      c.shadowOffsetX = 1;
+      c.shadowOffsetY = 2;
+      for (const p of points) {
+        const cx = toX(p.x), cy = toY(p.y);
+        const baseHex = p.label === 1 ? COLORS.olivine : COLORS.sienna;
+        const grad = c.createRadialGradient(
+          cx - R * 0.4, cy - R * 0.4, R * 0.1,
+          cx, cy, R,
+        );
+        grad.addColorStop(0, lightenHex(baseHex, 0.6));
+        grad.addColorStop(0.4, baseHex);
+        grad.addColorStop(1, darkenHex(baseHex, 0.5));
+        c.beginPath();
+        c.arc(cx, cy, R, 0, Math.PI * 2);
+        c.fillStyle = grad;
+        c.fill();
+      }
+      c.restore();
     }
 
     function cancelAnim() {
@@ -401,6 +591,7 @@ export default function (Alpine: Alpine) {
 
     return {
       dataset: 'separable',
+      seed: DEFAULT_SEEDS.separable!,
       clickLabel: 1 as 1 | -1,
       speed: '250',
       running: false,
@@ -439,11 +630,21 @@ export default function (Alpine: Alpine) {
       },
 
       loadPreset() {
+        this.setSeed(DEFAULT_SEEDS[this.dataset] ?? 0);
+      },
+
+      setSeed(seed: number) {
         cancelAnim();
         stopRun();
         this.running = false;
-        this.points = PRESETS[this.dataset]!.map((p) => ({ ...p }));
+        this.seed = seed;
+        this.points = generatePreset(this.dataset, seed);
         this.doReset();
+      },
+
+      randomize() {
+        if (this.dataset === 'blank') return;
+        this.setSeed(Math.floor(Math.random() * 1e9));
       },
 
       doReset() {
@@ -597,19 +798,18 @@ export default function (Alpine: Alpine) {
         if (Math.hypot(b.t1, b.t2) > 1e-9) {
           drawShadedHalfPlanes(ctx, W, H, b);
 
-          const activeColor = this.converged
-            ? COLORS.olivine
-            : this.nonseparableFlag
-              ? COLORS.sienna
-              : COLORS.porsche;
+          const activeColor = COLORS.colonial;
           const marginNow = this.converged ? computeMargin(this.points, b) : 0.4;
           const extent = this.converged
-            ? Math.max(0.4, Math.min(2.2, marginNow))
-            : 0.5;
-          const peak = this.converged ? 0.32 : 0.22;
-          drawMarginHalo(ctx, W, H, b, activeColor, extent, peak);
-          drawBoundaryGlow(ctx, W, H, b, activeColor);
-          drawNormalArrow(ctx, W, H, b);
+            ? Math.max(0.4, Math.min(2.0, marginNow))
+            : 0.4;
+          drawBoundaryGlow(ctx, W, H, b, activeColor, extent);
+          drawNormalArrow(ctx, W, H, b, extent, this.converged);
+          if (this.converged) {
+            drawMarginAnnotation(ctx, W, H, b, extent);
+            drawClassCornerLabels(ctx, W, H, b);
+          }
+          drawBoundaryFormula(ctx, W, H, b);
         }
 
         let pulseT = 1;
