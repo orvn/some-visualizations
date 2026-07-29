@@ -15,6 +15,7 @@ import randomIncidence from './modules/random-incidence';
 import poisson from './modules/poisson';
 import gradientDescent from './modules/gradient-descent';
 import bayesianRegression from './modules/bayesian-regression';
+import perceptron from './modules/perceptron';
 
 export default (Alpine: Alpine) => {
   normalVariance(Alpine);
@@ -32,4 +33,5 @@ export default (Alpine: Alpine) => {
   poisson(Alpine);
   gradientDescent(Alpine);
   bayesianRegression(Alpine);
+  perceptron(Alpine);
 };

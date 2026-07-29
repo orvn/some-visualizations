@@ -1,0 +1,288 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TabNav from '../../components/TabNav.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('perceptron');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/concept/perceptron',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="perceptron">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header" x-on:change="loadPreset()">
+          <p class="card-label"><span class="label-upper">Data</span></p>
+          <TabNav
+            modelField="dataset"
+            options={[
+              { value: 'separable', label: 'Separable' },
+              { value: 'blank', label: 'Blank' },
+            ]}
+          />
+        </div>
+
+        <div class="action-row">
+          <div class="label-toggle">
+            <span class="label-hint">click adds</span>
+            <button class="label-btn"
+              x-bind:class="clickLabel === 1 ? 'active-pos' : ''"
+              x-on:click="clickLabel = 1">+1</button>
+            <button class="label-btn"
+              x-bind:class="clickLabel === -1 ? 'active-neg' : ''"
+              x-on:click="clickLabel = -1">−1</button>
+          </div>
+          <div class="action-buttons">
+            <button class="button-viz" x-on:click="step()"
+              x-bind:disabled="converged || running || points.length === 0">Step <span class="step-icon">&#9654;</span></button>
+            <button class="button-viz" x-on:click="toggleRun()"
+              x-bind:disabled="(converged || points.length === 0) && !running">
+              <span x-text="running ? 'Pause' : 'Run'"></span>
+            </button>
+            <button class="button-viz" x-on:click="reset()">Reset</button>
+          </div>
+        </div>
+
+        <canvas id="pc-plot" class="plot-canvas"></canvas>
+
+        <div class="bottom-row">
+          <div class="bottom-left">
+            <div class="slider-row speed-slider">
+              <span class="slider-val" x-text="'speed = ' + speed + 'ms'"></span>
+              <input type="range" min="80" max="900" step="10" x-model="speed" />
+            </div>
+            <p class="click-hint">Click empty space to add a point (toggle sign above). Step or Run to train.</p>
+            <div class="step-info">
+              <span class="stat-line" x-text="'step ' + stepCount"></span>
+              <span class="stat-line" x-show="mistakeCount > 0" x-text="'mistakes = ' + mistakeCount"></span>
+              <span class="stat-line" x-show="thetaDisplay" x-text="'θ = ' + thetaDisplay"></span>
+              <span class="stat-line" x-show="marginDisplay" x-text="'γ = ' + marginDisplay"></span>
+              <span class="stat-line converged" x-show="converged">converged</span>
+              <span class="stat-line thrashing" x-show="nonseparableFlag">not linearly separable</span>
+            </div>
+          </div>
+          <div class="mobile-stats">
+            <span class="stat-line" x-text="'step ' + stepCount"></span>
+            <span class="stat-line" x-show="mistakeCount > 0" x-text="'mistakes = ' + mistakeCount"></span>
+            <span class="stat-line converged" x-show="converged">converged</span>
+            <span class="stat-line thrashing" x-show="nonseparableFlag">not separable</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key ideas</p>
+        <ul>
+          <li><strong>Decision rule:</strong> classify {"$\\hat{y} = \\mathrm{sign}(\\theta \\cdot x + \\theta_0)$"}. The boundary is the hyperplane where {"$\\theta \\cdot x + \\theta_0 = 0$"}, with normal vector θ</li>
+          <li><strong>Update rule (on mistake):</strong> {"$\\theta \\leftarrow \\theta + y\\, x$"} and {"$\\theta_0 \\leftarrow \\theta_0 + y$"}. Each misclassified point nudges θ so that point becomes correctly classified next time</li>
+          <li><strong>Novikoff's mistake bound:</strong> if data is linearly separable with margin γ and radius R, the perceptron makes at most {"$(R/\\gamma)^2$"} mistakes — independent of dataset size</li>
+          <li><strong>Not linearly separable → thrashes forever.</strong> No fixed point exists; θ keeps rotating in response to every mistake. Only kernels or a soft-margin loss can rescue this case</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .label-upper {
+    text-transform: uppercase;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .card-label {
+    margin-bottom: 0.5rem;
+  }
+
+  .action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .plot-canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    max-height: 30rem;
+    cursor: crosshair;
+    margin-bottom: 0.5rem;
+  }
+
+  .bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .bottom-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+  }
+
+  .step-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stat-line {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  .stat-line.converged {
+    color: var(--olivine);
+  }
+
+  .stat-line.thrashing {
+    color: var(--sienna);
+  }
+
+  .click-hint {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--potters-clay);
+  }
+
+  .speed-slider {
+    max-width: 18rem;
+  }
+
+  .speed-slider .slider-val {
+    min-width: 6.5rem;
+    font-weight: normal;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .step-icon {
+    font-size: 0.75em;
+    position: relative;
+    top: -0.05rem;
+    margin-left: 0.25rem;
+  }
+
+  .label-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .label-hint {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--potters-clay);
+  }
+
+  .label-btn {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    padding: 0.25rem 0.6rem;
+    background: transparent;
+    border: 0.0625rem solid var(--bronze);
+    color: var(--teak);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .label-btn:hover {
+    color: var(--colonial);
+    border-color: var(--potters-clay);
+  }
+
+  .label-btn.active-pos {
+    color: var(--olivine);
+    border-color: var(--olivine);
+    background: rgba(144, 184, 120, 0.08);
+  }
+
+  .label-btn.active-neg {
+    color: var(--sienna);
+    border-color: var(--sienna);
+    background: rgba(240, 120, 88, 0.08);
+  }
+
+  .mobile-stats {
+    display: none;
+  }
+
+  @media (max-width: 30em) {
+    .plot-canvas {
+      max-height: 22rem;
+    }
+
+    .bottom-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .bottom-left .step-info {
+      display: none;
+    }
+
+    .mobile-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .action-row {
+      justify-content: flex-end;
+    }
+
+    .card-header {
+      justify-content: flex-end;
+    }
+
+    .card-label {
+      width: 100%;
+    }
+
+    .speed-slider {
+      max-width: none;
+    }
+  }
+</style>

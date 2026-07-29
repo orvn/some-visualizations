@@ -1,0 +1,11 @@
+meta:
+  title: "The Perceptron"
+  description: Watch a linear classifier rotate its decision boundary to separate labeled points, one mistake at a time. Novikoff's convergence in action.
+  og_image: /og-image.png
+
+options: null
+
+content:
+  heading: "The Perceptron"
+  eyebrow: Classification
+  subtitle: "The first learning algorithm — θ rotates to find a separating hyperplane"
