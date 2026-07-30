@@ -24,65 +24,79 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function makeSeparable(seed: number): Pt[] {
-  const rng = mulberry32(seed);
-  const pts: Pt[] = [];
-  const ang = -Math.PI / 6 + (rng() - 0.5) * 0.6;
-  const dx = Math.cos(ang), dy = Math.sin(ang);
-  const nx = -dy, ny = dx;
-  const N_PER = 26;
-  const span = 4.0;
-  const minGap = 0.35;
-  const maxGap = 1.7;
+const N_POINTS = 40;
 
-  const pushClass = (sign: 1 | -1) => {
-    for (let i = 0; i < N_PER; i++) {
-      const t = -span + 2 * span * (i / (N_PER - 1));
-      const jit = (rng() - 0.5) * 0.5;
-      const off = minGap + rng() * (maxGap - minGap);
-      pts.push({
-        x: t * dx + jit * dx + sign * off * nx,
-        y: t * dy + jit * dy + sign * off * ny,
-        label: sign,
-      });
+function isLinearlySeparable(points: Pt[], maxPasses = 500): boolean {
+  let t1 = 0, t2 = 0, t0 = 0;
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let mistake = false;
+    for (const p of points) {
+      const score = p.label * (t1 * p.x + t2 * p.y + t0);
+      if (score <= 0) {
+        t1 += p.label * p.x;
+        t2 += p.label * p.y;
+        t0 += p.label;
+        mistake = true;
+      }
     }
-  };
-  pushClass(1);
-  pushClass(-1);
-  return pts;
+    if (!mistake) return true;
+  }
+  return false;
 }
 
-function makeNonseparable(seed: number): Pt[] {
+function generateSeparable(seed: number, n = N_POINTS): Pt[] {
   const rng = mulberry32(seed);
+  const angle = rng() * 2 * Math.PI;
+  const nx = Math.cos(angle);
+  const ny = Math.sin(angle);
+  const offset = (rng() - 0.5) * RANGE * 0.4;
+  const minMargin = 0.35;
+  const spread = RANGE * 0.9;
+  const targetPos = Math.floor(n / 2);
+  const targetNeg = n - targetPos;
+
   const pts: Pt[] = [];
-  const rot = (rng() - 0.5) * 0.6;
-  const cs = Math.cos(rot), sn = Math.sin(rot);
-  const clusters: Array<{ cx: number; cy: number; lbl: 1 | -1 }> = [
-    { cx: -2.5, cy: 2.5, lbl: 1 },
-    { cx: 2.5, cy: -2.5, lbl: 1 },
-    { cx: -2.5, cy: -2.5, lbl: -1 },
-    { cx: 2.5, cy: 2.5, lbl: -1 },
-  ];
-  const N_PER_CLUSTER = 12;
-  for (const c of clusters) {
-    const rx = c.cx * cs - c.cy * sn;
-    const ry = c.cx * sn + c.cy * cs;
-    for (let i = 0; i < N_PER_CLUSTER; i++) {
-      const angle = rng() * Math.PI * 2;
-      const radius = Math.sqrt(rng()) * 1.1;
-      pts.push({
-        x: rx + radius * Math.cos(angle),
-        y: ry + radius * Math.sin(angle),
-        label: c.lbl,
-      });
-    }
+  let posCount = 0, negCount = 0;
+  const maxAttempts = n * 50;
+  let attempts = 0;
+
+  while (pts.length < n && attempts < maxAttempts) {
+    attempts++;
+    const x = (rng() - 0.5) * 2 * spread;
+    const y = (rng() - 0.5) * 2 * spread;
+    const signedDist = nx * x + ny * y + offset;
+    if (Math.abs(signedDist) < minMargin) continue;
+    const label: 1 | -1 = signedDist > 0 ? 1 : -1;
+    if (label === 1 && posCount >= targetPos) continue;
+    if (label === -1 && negCount >= targetNeg) continue;
+    pts.push({ x, y, label });
+    if (label === 1) posCount++; else negCount++;
   }
   return pts;
 }
 
+function generateNonseparable(seed: number, n = N_POINTS): Pt[] {
+  const rng = mulberry32(seed);
+  const spread = RANGE * 0.9;
+  const targetPos = Math.floor(n / 2);
+  const maxAttempts = 200;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const pts: Pt[] = [];
+    for (let i = 0; i < n; i++) {
+      const x = (rng() - 0.5) * 2 * spread;
+      const y = (rng() - 0.5) * 2 * spread;
+      const label: 1 | -1 = i < targetPos ? 1 : -1;
+      pts.push({ x, y, label });
+    }
+    if (!isLinearlySeparable(pts, 800)) return pts;
+  }
+  return [];
+}
+
 function generatePreset(name: string, seed: number): Pt[] {
-  if (name === 'separable') return makeSeparable(seed);
-  if (name === 'nonseparable') return makeNonseparable(seed);
+  if (name === 'separable') return generateSeparable(seed);
+  if (name === 'nonseparable') return generateNonseparable(seed);
   return [];
 }
 
