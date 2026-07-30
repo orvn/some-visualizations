@@ -92,33 +92,6 @@ const DEFAULT_SEEDS: Record<string, number> = {
   blank: 0,
 };
 
-function lightenHex(hex: string, amt: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const R = Math.min(255, Math.round(r + amt * (255 - r)));
-  const G = Math.min(255, Math.round(g + amt * (255 - g)));
-  const B = Math.min(255, Math.round(b + amt * (255 - b)));
-  return `rgb(${R}, ${G}, ${B})`;
-}
-
-function darkenHex(hex: string, amt: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgb(${Math.round(r * (1 - amt))}, ${Math.round(g * (1 - amt))}, ${Math.round(b * (1 - amt))})`;
-}
-
-function mixHex(a: string, b: string, t = 0.5): string {
-  const ar = parseInt(a.slice(1, 3), 16);
-  const ag = parseInt(a.slice(3, 5), 16);
-  const ab = parseInt(a.slice(5, 7), 16);
-  const br = parseInt(b.slice(1, 3), 16);
-  const bg = parseInt(b.slice(3, 5), 16);
-  const bb = parseInt(b.slice(5, 7), 16);
-  return `rgb(${Math.round(ar + (br - ar) * t)}, ${Math.round(ag + (bg - ag) * t)}, ${Math.round(ab + (bb - ab) * t)})`;
-}
-
 
 
 function classify(p: Pt, b: Boundary): number {
