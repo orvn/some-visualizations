@@ -183,6 +183,7 @@ export default function (Alpine: Alpine) {
     let animTo: Boundary | null = null;
     let renderRaf: number | null = null;
     let runTimer: number | null = null;
+    let thetaSum: Boundary = { t1: 0, t2: 0, t0: 0 };
     let cursorIdx = 0;
     let cycleClean = 0;
     let lastMistake: { idx: number; ts: number } | null = null;
@@ -278,6 +279,28 @@ export default function (Alpine: Alpine) {
         c.fill();
       }
 
+      c.restore();
+    }
+
+    function drawDashedBoundary(
+      c: CanvasRenderingContext2D, W: number, H: number,
+      b: Boundary, color: string,
+    ) {
+      const seg = boundarySegment(b);
+      if (!seg) return;
+      const { pw, ph, toX, toY } = makeCoords(W, H);
+      c.save();
+      c.beginPath();
+      c.rect(pad.left, pad.top, pw, ph);
+      c.clip();
+      c.beginPath();
+      c.moveTo(toX(seg[0][0]), toY(seg[0][1]));
+      c.lineTo(toX(seg[1][0]), toY(seg[1][1]));
+      c.strokeStyle = color;
+      c.lineWidth = 1.5;
+      c.setLineDash([5, 4]);
+      c.stroke();
+      c.setLineDash([]);
       c.restore();
     }
 
@@ -705,6 +728,7 @@ export default function (Alpine: Alpine) {
         this.thetaDisplay = '';
         this.marginDisplay = '';
         cursorIdx = 0;
+        thetaSum = { t1: 0, t2: 0, t0: 0 };
         cycleClean = 0;
         lastMistake = null;
         history = [];
@@ -741,6 +765,9 @@ export default function (Alpine: Alpine) {
             }
 
             this.theta = newTheta;
+            thetaSum.t1 += newTheta.t1;
+            thetaSum.t2 += newTheta.t2;
+            thetaSum.t0 += newTheta.t0;
             cycleClean = 0;
             cursorIdx = (cursorIdx + 1) % n;
             this.updateDisplay();
@@ -850,6 +877,16 @@ export default function (Alpine: Alpine) {
             ? Math.max(0.4, Math.min(2.0, marginNow))
             : 0.4;
           drawBoundaryGlow(ctx, W, H, b, activeColor, extent);
+          if (this.mistakeCount > 0) {
+            const avg: Boundary = {
+              t1: thetaSum.t1 / this.mistakeCount,
+              t2: thetaSum.t2 / this.mistakeCount,
+              t0: thetaSum.t0 / this.mistakeCount,
+            };
+            if (Math.hypot(avg.t1, avg.t2) > 1e-9) {
+              drawDashedBoundary(ctx, W, H, avg, alpha(COLORS.teak, 0.75));
+            }
+          }
           drawNormalArrow(ctx, W, H, b, extent, this.converged);
           if (this.converged) {
             drawMarginAnnotation(ctx, W, H, b, extent);
