@@ -109,6 +109,18 @@ function darkenHex(hex: string, amt: number): string {
   return `rgb(${Math.round(r * (1 - amt))}, ${Math.round(g * (1 - amt))}, ${Math.round(b * (1 - amt))})`;
 }
 
+function mixHex(a: string, b: string, t = 0.5): string {
+  const ar = parseInt(a.slice(1, 3), 16);
+  const ag = parseInt(a.slice(3, 5), 16);
+  const ab = parseInt(a.slice(5, 7), 16);
+  const br = parseInt(b.slice(1, 3), 16);
+  const bg = parseInt(b.slice(3, 5), 16);
+  const bb = parseInt(b.slice(5, 7), 16);
+  return `rgb(${Math.round(ar + (br - ar) * t)}, ${Math.round(ag + (bg - ag) * t)}, ${Math.round(ab + (bb - ab) * t)})`;
+}
+
+
+
 function classify(p: Pt, b: Boundary): number {
   return p.label * (b.t1 * p.x + b.t2 * p.y + b.t0);
 }
@@ -384,7 +396,7 @@ export default function (Alpine: Alpine) {
       const { sx, sy, nPxX, nPxY, bDirX, bDirY, pxPerUnit } = g;
 
       const marginPx = marginExtent * pxPerUnit;
-      const arrowLen = Math.min(120, Math.max(60, marginPx + 26));
+      const arrowLen = Math.min(150, Math.max(95, marginPx + 40));
       const ex = sx + nPxX * arrowLen;
       const ey = sy + nPxY * arrowLen;
 
@@ -422,10 +434,10 @@ export default function (Alpine: Alpine) {
       c.fill();
 
       if (showAnnotations) {
-        const labelOffset = 12;
+        const labelOffset = 18;
         const lx = ex + nPxX * labelOffset;
         const ly = ey + nPxY * labelOffset;
-        c.font = 'italic 15px var(--font-display, Georgia, serif)';
+        c.font = 'italic 26px var(--font-display, Georgia, serif)';
         c.fillStyle = COLORS.colonial;
         c.textAlign = nPxX > 0.15 ? 'left' : nPxX < -0.15 ? 'right' : 'center';
         c.textBaseline = nPxY > 0.15 ? 'top' : nPxY < -0.15 ? 'bottom' : 'middle';
@@ -460,11 +472,11 @@ export default function (Alpine: Alpine) {
       c.lineTo(tx + bDirX * tickSz, ty + bDirY * tickSz);
       c.stroke();
 
-      const labelOff = 10;
+      const labelOff = 14;
       const lx = tx + bDirX * labelOff;
       const ly = ty + bDirY * labelOff;
-      c.font = 'italic 13px var(--font-display, Georgia, serif)';
-      c.fillStyle = alpha(COLORS.colonial, 0.85);
+      c.font = 'italic 20px var(--font-display, Georgia, serif)';
+      c.fillStyle = alpha(COLORS.colonial, 0.9);
       c.textAlign = bDirX > 0.15 ? 'left' : bDirX < -0.15 ? 'right' : 'center';
       c.textBaseline = bDirY > 0.15 ? 'top' : bDirY < -0.15 ? 'bottom' : 'middle';
       c.fillText('γ', lx, ly);
@@ -472,36 +484,72 @@ export default function (Alpine: Alpine) {
       c.restore();
     }
 
-    function drawBoundaryFormula(c: CanvasRenderingContext2D, W: number, H: number, b: Boundary) {
+    function drawBoundaryFormula(c: CanvasRenderingContext2D, W: number, H: number, b: Boundary, marginExtent: number) {
       const { t1, t2, t0 } = b;
       if (Math.hypot(t1, t2) < 1e-9) return;
-      const { pw } = makeCoords(W, H);
+      const g = computeArrowGeom(W, H, b);
+      if (!g) return;
+      const { pw, ph, toX, toY } = makeCoords(W, H);
+      const { nPxX, nPxY, pxPerUnit } = g;
+      const seg = boundarySegment(b);
+      if (!seg) return;
 
       const fmt = (v: number) => {
-        const s = v.toFixed(1);
-        return s === '-0.0' ? '0.0' : s;
+        const rounded = Math.round(v * 10) / 10;
+        const val = rounded === 0 ? 0 : rounded;
+        return Number.isInteger(val) ? String(val) : val.toFixed(1);
       };
 
       const text =
-        fmt(t1) + ' x₁'
-        + (t2 >= 0 ? ' + ' : ' − ') + fmt(Math.abs(t2)) + ' x₂'
+        fmt(t1) + 'x₁'
+        + (t2 >= 0 ? ' + ' : ' − ') + fmt(Math.abs(t2)) + 'x₂'
         + (t0 >= 0 ? ' + ' : ' − ') + fmt(Math.abs(t0))
         + ' = 0';
 
+      const bpx1 = toX(seg[0][0]);
+      const bpy1 = toY(seg[0][1]);
+      const bpx2 = toX(seg[1][0]);
+      const bpy2 = toY(seg[1][1]);
+      // pick the topmost endpoint (smaller py) so formula lives near top of the line
+      const topFirst = bpy1 <= bpy2;
+      const ex = topFirst ? bpx1 : bpx2;
+      const ey = topFirst ? bpy1 : bpy2;
+      const dx = topFirst ? bpx2 - bpx1 : bpx1 - bpx2;
+      const dy = topFirst ? bpy2 - bpy1 : bpy1 - bpy2;
+      const lineLen = Math.hypot(dx, dy);
+      if (lineLen < 1) return;
+
       c.save();
-      c.font = '11px var(--font-mono, monospace)';
-      c.textAlign = 'center';
-      c.textBaseline = 'top';
+      c.beginPath();
+      c.rect(pad.left, pad.top, pw, ph);
+      c.clip();
 
+      c.font = '13px var(--font-mono, monospace)';
       const tw = c.measureText(text).width;
-      const cx = pad.left + pw / 2;
-      const cy = pad.top + 5;
+      const halfFrac = tw / (2 * lineLen);
+      const anchorFrac = Math.min(0.5, Math.max(halfFrac + 0.04, 0.14));
 
-      c.fillStyle = alpha(COLORS.graphite, 0.72);
-      c.fillRect(cx - tw / 2 - 7, cy - 3, tw + 14, 18);
+      const ax = ex + dx * anchorFrac;
+      const ay = ey + dy * anchorFrac;
 
+      const marginPx = marginExtent * pxPerUnit;
+      const offset = Math.max(22, marginPx + 14);
+      const px = ax - nPxX * offset;
+      const py = ay - nPxY * offset;
+
+      let ang = Math.atan2(dy, dx);
+      if (Math.cos(ang) < 0) ang += Math.PI;
+
+      c.translate(px, py);
+      c.rotate(ang);
+
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.lineWidth = 3.5;
+      c.strokeStyle = alpha(COLORS.graphite, 0.9);
+      c.strokeText(text, 0, 0);
       c.fillStyle = COLORS.colonial;
-      c.fillText(text, cx, cy);
+      c.fillText(text, 0, 0);
 
       c.restore();
     }
@@ -510,18 +558,18 @@ export default function (Alpine: Alpine) {
       const { t1, t2 } = b;
       if (Math.hypot(t1, t2) < 1e-9) return;
       const { toX, toY } = makeCoords(W, H);
-      const posX = t1 >= 0 ? RANGE - 0.35 : -RANGE + 0.35;
-      const posY = t2 >= 0 ? RANGE - 0.35 : -RANGE + 0.35;
+      const posX = t1 >= 0 ? RANGE - 0.5 : -RANGE + 0.5;
+      const posY = t2 >= 0 ? RANGE - 0.5 : -RANGE + 0.5;
       const negX = -posX;
       const negY = -posY;
 
       c.save();
-      c.font = 'bold 11px var(--font-mono, monospace)';
+      c.font = 'bold 15px var(--font-mono, monospace)';
       c.textBaseline = 'middle';
       c.textAlign = 'center';
-      c.fillStyle = alpha(COLORS.olivine, 0.6);
+      c.fillStyle = alpha(COLORS.olivine, 0.7);
       c.fillText('+1', toX(posX), toY(posY));
-      c.fillStyle = alpha(COLORS.sienna, 0.6);
+      c.fillStyle = alpha(COLORS.sienna, 0.7);
       c.fillText('−1', toX(negX), toY(negY));
       c.restore();
     }
@@ -531,7 +579,8 @@ export default function (Alpine: Alpine) {
       points: Pt[], mistakeIdx: number | null, pulseT: number,
     ) {
       const { toX, toY } = makeCoords(W, H);
-      const R = 6;
+      const R = 8;
+      const cp = R * 0.1 * Math.SQRT1_2;
 
       if (mistakeIdx !== null && pulseT < 1 && points[mistakeIdx]) {
         const p = points[mistakeIdx]!;
@@ -539,7 +588,7 @@ export default function (Alpine: Alpine) {
         const posColor = p.label === 1 ? COLORS.olivine : COLORS.sienna;
         const eased = easeInOut(pulseT);
         const ringR = R + eased * 18;
-        const ringA = (1 - eased) * 0.8;
+        const ringA = (1 - eased) * 0.85;
         c.beginPath();
         c.arc(cx, cy, ringR, 0, Math.PI * 2);
         c.strokeStyle = alpha(posColor, ringA);
@@ -547,27 +596,37 @@ export default function (Alpine: Alpine) {
         c.stroke();
       }
 
-      c.save();
-      c.shadowColor = 'rgba(0, 0, 0, 0.5)';
-      c.shadowBlur = 4;
-      c.shadowOffsetX = 1;
-      c.shadowOffsetY = 2;
+      const sparkPath = (ox: number, oy: number) => {
+        c.beginPath();
+        c.moveTo(ox, oy - R);
+        c.quadraticCurveTo(ox + cp, oy - cp, ox + R, oy);
+        c.quadraticCurveTo(ox + cp, oy + cp, ox, oy + R);
+        c.quadraticCurveTo(ox - cp, oy + cp, ox - R, oy);
+        c.quadraticCurveTo(ox - cp, oy - cp, ox, oy - R);
+        c.closePath();
+      };
+
       for (const p of points) {
         const cx = toX(p.x), cy = toY(p.y);
         const baseHex = p.label === 1 ? COLORS.olivine : COLORS.sienna;
-        const grad = c.createRadialGradient(
-          cx - R * 0.4, cy - R * 0.4, R * 0.1,
-          cx, cy, R,
-        );
-        grad.addColorStop(0, lightenHex(baseHex, 0.6));
-        grad.addColorStop(0.4, baseHex);
-        grad.addColorStop(1, darkenHex(baseHex, 0.5));
-        c.beginPath();
-        c.arc(cx, cy, R, 0, Math.PI * 2);
-        c.fillStyle = grad;
+
+        sparkPath(cx, cy);
+        c.fillStyle = baseHex;
         c.fill();
+        c.strokeStyle = COLORS.graphite;
+        c.lineWidth = 0.9;
+        c.stroke();
+
+        c.save();
+        c.clip();
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = 0.6;
+        c.beginPath();
+        c.moveTo(cx - R * 0.08 + 0.5, cy - R * 0.4 + 0.5);
+        c.quadraticCurveTo(cx - R * 0.14 + 0.5, cy - R * 0.14 + 0.5, cx - R * 0.4 + 0.5, cy - R * 0.08 + 0.5);
+        c.stroke();
+        c.restore();
       }
-      c.restore();
     }
 
     function cancelAnim() {
@@ -809,7 +868,7 @@ export default function (Alpine: Alpine) {
             drawMarginAnnotation(ctx, W, H, b, extent);
             drawClassCornerLabels(ctx, W, H, b);
           }
-          drawBoundaryFormula(ctx, W, H, b);
+          drawBoundaryFormula(ctx, W, H, b, extent);
         }
 
         let pulseT = 1;
