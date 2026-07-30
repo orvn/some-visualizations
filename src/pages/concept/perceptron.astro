@@ -98,6 +98,29 @@ const jsonLD = {
 
         <canvas id="pc-plot" class="plot-canvas"></canvas>
 
+        <div class="legend">
+          <div class="legend-item">
+            <svg class="legend-star" viewBox="-10 -10 20 20" aria-hidden="true">
+              <path d="M 0,-8 Q 0.8,-0.8 8,0 Q 0.8,0.8 0,8 Q -0.8,0.8 -8,0 Q -0.8,-0.8 0,-8 Z" fill="var(--olivine)" />
+            </svg>
+            <span>+1</span>
+          </div>
+          <div class="legend-item">
+            <svg class="legend-star" viewBox="-10 -10 20 20" aria-hidden="true">
+              <path d="M 0,-8 Q 0.8,-0.8 8,0 Q 0.8,0.8 0,8 Q -0.8,0.8 -8,0 Q -0.8,-0.8 0,-8 Z" fill="var(--sienna)" />
+            </svg>
+            <span>−1</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch swatch-solid"></span>
+            <span>perceptron θ</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch swatch-dashed"></span>
+            <span>averaged θ̄</span>
+          </div>
+        </div>
+
         <p class="click-hint">Click empty space to add a point. Step or Run to train.</p>
       </div>
 
@@ -302,6 +325,42 @@ const jsonLD = {
     font-family: var(--font-sans);
     font-size: var(--text-xs);
     color: var(--potters-clay);
+  }
+
+  .legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.4rem 0.05rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .legend-star {
+    width: 0.9rem;
+    height: 0.9rem;
+    display: block;
+  }
+
+  .swatch {
+    display: inline-block;
+    width: 1.6rem;
+    height: 0;
+  }
+
+  .swatch-solid {
+    border-top: 0.125rem solid var(--colonial);
+  }
+
+  .swatch-dashed {
+    border-top: 0.125rem dashed var(--teak);
   }
 
   .speed-slider .slider-label {

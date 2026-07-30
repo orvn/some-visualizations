@@ -324,39 +324,6 @@ export default function (Alpine: Alpine) {
       c.restore();
     }
 
-    function drawBoundaryGlow(
-      c: CanvasRenderingContext2D, W: number, H: number,
-      b: Boundary, color: string, marginExtent: number,
-    ) {
-      const seg = boundarySegment(b);
-      if (!seg) return;
-      const { pw, ph, toX, toY } = makeCoords(W, H);
-      const pxPerUnit = (pw / (2 * RANGE) + ph / (2 * RANGE)) / 2;
-      const marginPx = Math.max(6, marginExtent * pxPerUnit);
-
-      c.save();
-      c.beginPath();
-      c.rect(pad.left, pad.top, pw, ph);
-      c.clip();
-      c.lineCap = 'round';
-
-      const passes: Array<[number, number]> = [
-        [marginPx * 2.2, 0.05],
-        [marginPx * 1.4, 0.11],
-        [marginPx * 0.7, 0.22],
-        [2.2, 1.0],
-      ];
-      for (const [w, a] of passes) {
-        c.beginPath();
-        c.moveTo(toX(seg[0][0]), toY(seg[0][1]));
-        c.lineTo(toX(seg[1][0]), toY(seg[1][1]));
-        c.strokeStyle = a < 1 ? alpha(color, a) : color;
-        c.lineWidth = w;
-        c.stroke();
-      }
-      c.restore();
-    }
-
     type ArrowGeom = {
       sx: number; sy: number;
       nPxX: number; nPxY: number;
@@ -876,7 +843,7 @@ export default function (Alpine: Alpine) {
           const extent = this.converged
             ? Math.max(0.4, Math.min(2.0, marginNow))
             : 0.4;
-          drawBoundaryGlow(ctx, W, H, b, activeColor, extent);
+          drawBoundary(ctx, W, H, b, activeColor, 2);
           if (this.mistakeCount > 0) {
             const avg: Boundary = {
               t1: thetaSum.t1 / this.mistakeCount,
