@@ -35,28 +35,27 @@ const jsonLD = {
       <p class="subtitle">{c.subtitle}</p>
 
       <div class="card">
-        <div class="card-header" x-on:change="loadPreset()">
-          <p class="card-label"><span class="label-upper">Data</span></p>
-          <TabNav
-            modelField="dataset"
-            options={[
-              { value: 'separable', label: 'Separable' },
-              { value: 'nonseparable', label: 'Not separable' },
-              { value: 'blank', label: 'Blank' },
-            ]}
-          />
+        <div class="card-header">
+          <div class="dataset-selector" x-on:change="loadPreset()">
+            <TabNav
+              modelField="dataset"
+              options={[
+                { value: 'separable', label: 'Separable' },
+                { value: 'nonseparable', label: 'Not separable' },
+                { value: 'blank', label: 'Blank' },
+              ]}
+            />
+          </div>
+          <div class="header-controls">
+            <div class="slider-row speed-slider">
+              <span class="slider-label">speed</span>
+              <input type="range" min="80" max="900" step="10" x-model="speed" />
+              <span class="slider-val" x-text="speed + 'ms'"></span>
+            </div>
+          </div>
         </div>
 
         <div class="action-row">
-          <div class="label-toggle">
-            <span class="label-hint">click adds</span>
-            <button class="label-btn"
-              x-bind:class="clickLabel === 1 ? 'active-pos' : ''"
-              x-on:click="clickLabel = 1">+1</button>
-            <button class="label-btn"
-              x-bind:class="clickLabel === -1 ? 'active-neg' : ''"
-              x-on:click="clickLabel = -1">−1</button>
-          </div>
           <div class="action-buttons">
             <button class="button-viz" x-on:click="step()"
               x-bind:disabled="converged || running || points.length === 0">Step <span class="step-icon">&#9654;</span></button>
@@ -68,36 +67,38 @@ const jsonLD = {
             <button class="button-viz" x-on:click="randomize()"
               x-bind:disabled="dataset === 'blank'"
               title="Regenerate this dataset with a new random seed">
-              <span class="step-icon randomize-icon">&#8635;</span> New
+              <span class="step-icon randomize-icon">&#8635;</span> Regenerate
             </button>
+          </div>
+        </div>
+
+        <div class="pre-chart-row">
+          <div class="switch-wrap">
+            <span class="switch-cap">click adds</span>
+            <button class="sign-switch"
+              x-on:click="clickLabel = clickLabel === 1 ? -1 : 1"
+              x-bind:class="clickLabel === 1 ? 'switch-pos' : 'switch-neg'"
+              title="Toggle click sign">
+              <span class="switch-knob">
+                <svg class="switch-star" viewBox="-10 -10 20 20" aria-hidden="true">
+                  <path d="M 0,-8 Q 0.8,-0.8 8,0 Q 0.8,0.8 0,8 Q -0.8,0.8 -8,0 Q -0.8,-0.8 0,-8 Z" fill="currentColor" />
+                </svg>
+              </span>
+            </button>
+          </div>
+          <div class="step-info">
+            <span class="stat-line" x-text="'step ' + stepCount"></span>
+            <span class="stat-line" x-show="mistakeCount > 0" x-text="'mistakes = ' + mistakeCount"></span>
+            <span class="stat-line" x-show="thetaDisplay" x-text="'θ = ' + thetaDisplay"></span>
+            <span class="stat-line" x-show="marginDisplay" x-text="'γ = ' + marginDisplay"></span>
+            <span class="stat-line converged" x-show="converged">converged</span>
+            <span class="stat-line thrashing" x-show="nonseparableFlag">not linearly separable</span>
           </div>
         </div>
 
         <canvas id="pc-plot" class="plot-canvas"></canvas>
 
-        <div class="bottom-row">
-          <div class="bottom-left">
-            <div class="slider-row speed-slider">
-              <span class="slider-val" x-text="'speed = ' + speed + 'ms'"></span>
-              <input type="range" min="80" max="900" step="10" x-model="speed" />
-            </div>
-            <p class="click-hint">Click empty space to add a point (toggle sign above). Step or Run to train.</p>
-            <div class="step-info">
-              <span class="stat-line" x-text="'step ' + stepCount"></span>
-              <span class="stat-line" x-show="mistakeCount > 0" x-text="'mistakes = ' + mistakeCount"></span>
-              <span class="stat-line" x-show="thetaDisplay" x-text="'θ = ' + thetaDisplay"></span>
-              <span class="stat-line" x-show="marginDisplay" x-text="'γ = ' + marginDisplay"></span>
-              <span class="stat-line converged" x-show="converged">converged</span>
-              <span class="stat-line thrashing" x-show="nonseparableFlag">not linearly separable</span>
-            </div>
-          </div>
-          <div class="mobile-stats">
-            <span class="stat-line" x-text="'step ' + stepCount"></span>
-            <span class="stat-line" x-show="mistakeCount > 0" x-text="'mistakes = ' + mistakeCount"></span>
-            <span class="stat-line converged" x-show="converged">converged</span>
-            <span class="stat-line thrashing" x-show="nonseparableFlag">not separable</span>
-          </div>
-        </div>
+        <p class="click-hint">Click empty space to add a point. Step or Run to train.</p>
       </div>
 
       <div class="insight">
@@ -132,10 +133,101 @@ const jsonLD = {
   .action-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
     flex-wrap: wrap;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .header-controls .slider-row {
+    margin-top: 0;
+  }
+
+  .switch-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .switch-cap {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--potters-clay);
+  }
+
+  .sign-switch {
+    position: relative;
+    width: 2.75rem;
+    height: 1.35rem;
+    padding: 0;
+    border-radius: 0.675rem;
+    border: 0.0625rem solid var(--bronze);
+    background: var(--clinker);
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  }
+
+  .sign-switch.switch-pos {
+    background: rgba(144, 184, 120, 0.14);
+    border-color: rgba(144, 184, 120, 0.45);
+  }
+
+  .sign-switch.switch-neg {
+    background: rgba(240, 120, 88, 0.14);
+    border-color: rgba(240, 120, 88, 0.45);
+  }
+
+  .switch-knob {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 1.225rem;
+    height: 1.225rem;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #2a1409, #100604);
+    border: 0.0625rem solid var(--olivine);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--olivine);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.55),
+      inset 0 0.5px 0 rgba(240, 216, 168, 0.12);
+    transform: translateY(-50%);
+    transition: transform var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .switch-star {
+    width: 78%;
+    height: 78%;
+    display: block;
+  }
+
+  .switch-pos .switch-knob {
+    transform: translate(1.4rem, -50%);
+    color: var(--olivine);
+    border-color: var(--olivine);
+  }
+
+  .switch-neg .switch-knob {
+    transform: translateY(-50%);
+    color: var(--sienna);
+    border-color: var(--sienna);
+  }
+
+  .sign-switch:hover .switch-knob {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.6),
+      inset 0 0.5px 0 rgba(240, 216, 168, 0.18);
   }
 
   .plot-canvas {
@@ -147,25 +239,20 @@ const jsonLD = {
     margin-bottom: 0.5rem;
   }
 
-  .bottom-row {
+  .pre-chart-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     gap: 1rem;
-    margin-top: 0.5rem;
-  }
-
-  .bottom-left {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    flex: 1;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .step-info {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    flex-direction: row;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .stat-line {
@@ -188,13 +275,23 @@ const jsonLD = {
     color: var(--potters-clay);
   }
 
-  .speed-slider {
-    max-width: 18rem;
+  .speed-slider .slider-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  .speed-slider input[type="range"] {
+    width: 8rem;
+    height: 1.35rem;
   }
 
   .speed-slider .slider-val {
-    min-width: 6.5rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
     font-weight: normal;
+    min-width: 3.25rem;
   }
 
   .action-buttons {
@@ -216,70 +313,15 @@ const jsonLD = {
     top: 0.05rem;
   }
 
-  .label-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .label-hint {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--potters-clay);
-  }
-
-  .label-btn {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    padding: 0.25rem 0.6rem;
-    background: transparent;
-    border: 0.0625rem solid var(--bronze);
-    color: var(--teak);
-    border-radius: 0.25rem;
-    cursor: pointer;
-    line-height: 1;
-    transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
-  }
-
-  .label-btn:hover {
-    color: var(--colonial);
-    border-color: var(--potters-clay);
-  }
-
-  .label-btn.active-pos {
-    color: var(--olivine);
-    border-color: var(--olivine);
-    background: rgba(144, 184, 120, 0.08);
-  }
-
-  .label-btn.active-neg {
-    color: var(--sienna);
-    border-color: var(--sienna);
-    background: rgba(240, 120, 88, 0.08);
-  }
-
-  .mobile-stats {
-    display: none;
-  }
-
   @media (max-width: 30em) {
     .plot-canvas {
       max-height: 22rem;
     }
 
-    .bottom-row {
+    .pre-chart-row {
       flex-direction: column;
       align-items: stretch;
-    }
-
-    .bottom-left .step-info {
-      display: none;
-    }
-
-    .mobile-stats {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.5rem;
     }
 
     .action-row {

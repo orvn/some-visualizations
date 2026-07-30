@@ -437,7 +437,7 @@ export default function (Alpine: Alpine) {
         const labelOffset = 18;
         const lx = ex + nPxX * labelOffset;
         const ly = ey + nPxY * labelOffset;
-        c.font = 'italic 26px var(--font-display, Georgia, serif)';
+        c.font = 'italic 34px var(--font-display, Georgia, serif)';
         c.fillStyle = COLORS.colonial;
         c.textAlign = nPxX > 0.15 ? 'left' : nPxX < -0.15 ? 'right' : 'center';
         c.textBaseline = nPxY > 0.15 ? 'top' : nPxY < -0.15 ? 'bottom' : 'middle';
@@ -475,7 +475,7 @@ export default function (Alpine: Alpine) {
       const labelOff = 14;
       const lx = tx + bDirX * labelOff;
       const ly = ty + bDirY * labelOff;
-      c.font = 'italic 20px var(--font-display, Georgia, serif)';
+      c.font = 'italic 26px var(--font-display, Georgia, serif)';
       c.fillStyle = alpha(COLORS.colonial, 0.9);
       c.textAlign = bDirX > 0.15 ? 'left' : bDirX < -0.15 ? 'right' : 'center';
       c.textBaseline = bDirY > 0.15 ? 'top' : bDirY < -0.15 ? 'bottom' : 'middle';
