@@ -56,6 +56,19 @@ const jsonLD = {
         </div>
 
         <div class="action-row">
+          <div class="switch-wrap">
+            <span class="switch-cap">click adds</span>
+            <button class="sign-switch"
+              x-on:click="clickLabel = clickLabel === 1 ? -1 : 1"
+              x-bind:class="clickLabel === 1 ? 'switch-pos' : 'switch-neg'"
+              title="Toggle click sign">
+              <span class="switch-knob">
+                <svg class="switch-star" viewBox="-10 -10 20 20" aria-hidden="true">
+                  <path d="M 0,-8 Q 0.8,-0.8 8,0 Q 0.8,0.8 0,8 Q -0.8,0.8 -8,0 Q -0.8,-0.8 0,-8 Z" fill="currentColor" />
+                </svg>
+              </span>
+            </button>
+          </div>
           <div class="action-buttons">
             <button class="button-viz" x-on:click="step()"
               x-bind:disabled="converged || running || points.length === 0">Step <span class="step-icon">&#9654;</span></button>
@@ -73,19 +86,6 @@ const jsonLD = {
         </div>
 
         <div class="pre-chart-row">
-          <div class="switch-wrap">
-            <span class="switch-cap">click adds</span>
-            <button class="sign-switch"
-              x-on:click="clickLabel = clickLabel === 1 ? -1 : 1"
-              x-bind:class="clickLabel === 1 ? 'switch-pos' : 'switch-neg'"
-              title="Toggle click sign">
-              <span class="switch-knob">
-                <svg class="switch-star" viewBox="-10 -10 20 20" aria-hidden="true">
-                  <path d="M 0,-8 Q 0.8,-0.8 8,0 Q 0.8,0.8 0,8 Q -0.8,0.8 -8,0 Q -0.8,-0.8 0,-8 Z" fill="currentColor" />
-                </svg>
-              </span>
-            </button>
-          </div>
           <div class="step-info">
             <span class="stat-line" x-text="'step ' + stepCount"></span>
             <span class="stat-line" x-show="mistakeCount > 0" x-text="'mistakes = ' + mistakeCount"></span>
@@ -133,7 +133,7 @@ const jsonLD = {
   .action-row {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
     flex-wrap: wrap;
@@ -251,8 +251,37 @@ const jsonLD = {
   .step-info {
     display: flex;
     flex-direction: row;
-    gap: 0.75rem;
     flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    padding: 0.35rem 0.75rem;
+    background: rgba(46, 21, 8, 0.45);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.375rem;
+  }
+
+  .step-info .stat-line {
+    position: relative;
+    padding: 0 0.75rem;
+    line-height: 1.35;
+  }
+
+  .step-info .stat-line:first-child {
+    padding-left: 0;
+  }
+
+  .step-info .stat-line:last-child {
+    padding-right: 0;
+  }
+
+  .step-info .stat-line:not(:first-child)::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    bottom: 0.1em;
+    width: 0.0625rem;
+    background: var(--potters-clay);
   }
 
   .stat-line {
