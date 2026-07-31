@@ -282,6 +282,28 @@ export default function (Alpine: Alpine) {
       c.restore();
     }
 
+    function drawBlockGhost(
+      c: CanvasRenderingContext2D, W: number, H: number,
+      b: Boundary, color: string, alphaVal: number,
+    ) {
+      const seg = boundarySegment(b);
+      if (!seg) return;
+      const { pw, ph, toX, toY } = makeCoords(W, H);
+      c.save();
+      c.beginPath();
+      c.rect(pad.left, pad.top, pw, ph);
+      c.clip();
+      c.setLineDash([6, 4]);
+      c.beginPath();
+      c.moveTo(toX(seg[0][0]), toY(seg[0][1]));
+      c.lineTo(toX(seg[1][0]), toY(seg[1][1]));
+      c.strokeStyle = alpha(color, alphaVal);
+      c.lineWidth = 2;
+      c.stroke();
+      c.setLineDash([]);
+      c.restore();
+    }
+
     function drawDashedBoundary(
       c: CanvasRenderingContext2D, W: number, H: number,
       b: Boundary, color: string,
@@ -843,6 +865,18 @@ export default function (Alpine: Alpine) {
           const extent = this.converged
             ? Math.max(0.4, Math.min(2.0, marginNow))
             : 0.4;
+
+          if (animFrom && animTo && animT < 1) {
+            const GHOST_COUNT = 5;
+            for (let i = 1; i <= GHOST_COUNT; i++) {
+              const t = i / (GHOST_COUNT + 1);
+              if (animT < t) break;
+              const ghost = lerpBoundary(animFrom, animTo, easeInOut(t));
+              const age = (animT - t) / (1 - t);
+              drawBlockGhost(ctx, W, H, ghost, activeColor, 0.55 * (1 - age));
+            }
+          }
+
           drawBoundary(ctx, W, H, b, activeColor, 2);
           if (this.mistakeCount > 0) {
             const avg: Boundary = {
