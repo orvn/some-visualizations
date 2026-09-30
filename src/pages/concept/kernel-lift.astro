@@ -1,0 +1,272 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadGlobal, loadPage } from '../../lib/content';
+
+const global = loadGlobal();
+const { meta, content } = loadPage('kernel-lift');
+const c = content as {
+  heading: string;
+  eyebrow: string;
+  subtitle: string;
+};
+
+const jsonLD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: c.heading,
+  description: meta.description,
+  url: global.url + '/concept/kernel-lift',
+};
+---
+
+<BaseLayout
+  title={meta.title ?? undefined}
+  description={meta.description}
+  ogImage={meta.og_image}
+  jsonLD={jsonLD}
+>
+
+  <section class="viz-wrap">
+    <div class="viz-container" x-data="kernelLift">
+
+      <p class="eyebrow">{c.eyebrow}</p>
+      <h1>{c.heading}</h1>
+      <p class="subtitle">{c.subtitle}</p>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="header-controls">
+            <div class="slider-row tilt-slider">
+              <span class="slider-label">lift</span>
+              <input type="range" min="0" max="100" step="1" x-model="tiltPct" />
+              <span class="slider-val" x-text="Math.round(parseFloat(tiltPct)) + '%'"></span>
+            </div>
+          </div>
+          <div class="action-buttons">
+            <button class="button-viz" x-on:click="toggleLift()">
+              <span x-text="tiltPct > 50 ? 'Flatten' : 'Lift'"></span>
+            </button>
+            <button class="button-viz" x-on:click="randomize()">
+              <span class="step-icon randomize-icon">&#8635;</span> Regenerate
+            </button>
+          </div>
+        </div>
+
+        <div class="pre-chart-row">
+          <div class="step-info">
+            <span class="stat-line">φ(x₁, x₂) = (x₁, x₂, x₁² + x₂²)</span>
+            <span class="stat-line" x-text="'plane at z = ' + planeZ.toFixed(1)"></span>
+          </div>
+        </div>
+
+        <canvas id="kl-plot" class="plot-canvas"></canvas>
+
+        <div class="legend">
+          <div class="legend-item">
+            <svg class="legend-star" viewBox="-10 -10 20 20" aria-hidden="true">
+              <path d="M 0,-8 Q 0.8,-0.8 8,0 Q 0.8,0.8 0,8 Q -0.8,0.8 -8,0 Q -0.8,-0.8 0,-8 Z" fill="var(--olivine)" />
+            </svg>
+            <span>+1 (outer ring)</span>
+          </div>
+          <div class="legend-item">
+            <svg class="legend-star" viewBox="-10 -10 20 20" aria-hidden="true">
+              <path d="M 0,-8 Q 0.8,-0.8 8,0 Q 0.8,0.8 0,8 Q -0.8,0.8 -8,0 Q -0.8,-0.8 0,-8 Z" fill="var(--sienna)" />
+            </svg>
+            <span>−1 (inner ring)</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch swatch-solid"></span>
+            <span>separating plane / circle</span>
+          </div>
+          <div class="legend-item">
+            <span class="swatch swatch-dashed"></span>
+            <span>φ paraboloid</span>
+          </div>
+        </div>
+
+        <p class="click-hint">Drag the lift slider or tap Lift to raise the points into feature space.</p>
+      </div>
+
+      <div class="insight">
+        <p class="card-label">Key ideas</p>
+        <ul>
+          <li><strong>Non-linearly separable in 2D:</strong> two concentric rings have no straight line between them. A perceptron would thrash forever</li>
+          <li><strong>The feature map:</strong> {"$\\phi(x_1, x_2) = (x_1, x_2, x_1^2 + x_2^2)$"} lifts each point onto a paraboloid. Points farther from the origin sit higher</li>
+          <li><strong>Linear in the lifted space:</strong> a flat plane at some height {"$z = c$"} cleanly separates the outer ring (which lives high) from the inner ring (which lives low)</li>
+          <li><strong>Project back to 2D:</strong> that plane's intersection with the paraboloid is a horizontal circle — the boundary is nonlinear in the original space even though it's linear in feature space</li>
+          <li><strong>The kernel trick:</strong> we never have to explicitly compute {"$\\phi(x)$"} — an inner product {"$K(x, x') = \\phi(x)\\cdot \\phi(x')$"} is enough for many learners to work in the lifted space implicitly</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<style>
+  .card-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .card-label {
+    margin-bottom: 0.5rem;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .header-controls .slider-row {
+    margin-top: 0;
+  }
+
+  .tilt-slider .slider-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  .tilt-slider input[type="range"] {
+    width: 10rem;
+    height: 1.35rem;
+  }
+
+  .tilt-slider .slider-val {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+    font-weight: normal;
+    min-width: 3rem;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .step-icon {
+    font-size: 0.75em;
+    position: relative;
+    top: -0.05rem;
+    margin-left: 0.25rem;
+  }
+
+  .randomize-icon {
+    font-size: 1em;
+    margin-left: 0;
+    margin-right: 0.25rem;
+    top: 0.05rem;
+  }
+
+  .plot-canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    max-height: 32rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .pre-chart-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    padding: 0.35rem 0.75rem;
+    background: rgba(46, 21, 8, 0.45);
+    border: 0.0625rem solid var(--bronze);
+    border-radius: 0.375rem;
+  }
+
+  .stat-line {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+    position: relative;
+    padding: 0 0.75rem;
+    line-height: 1.35;
+  }
+
+  .stat-line:first-child {
+    padding-left: 0;
+  }
+
+  .stat-line:last-child {
+    padding-right: 0;
+  }
+
+  .stat-line:not(:first-child)::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    bottom: 0.1em;
+    width: 0.0625rem;
+    background: var(--potters-clay);
+  }
+
+  .click-hint {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--potters-clay);
+  }
+
+  .legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.4rem 0.05rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--teak);
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .legend-star {
+    width: 0.9rem;
+    height: 0.9rem;
+    display: block;
+  }
+
+  .swatch {
+    display: inline-block;
+    width: 1.6rem;
+    height: 0;
+  }
+
+  .swatch-solid {
+    border-top: 0.125rem solid var(--colonial);
+  }
+
+  .swatch-dashed {
+    border-top: 0.125rem dashed var(--teak);
+  }
+
+  @media (max-width: 30em) {
+    .plot-canvas {
+      max-height: 22rem;
+    }
+
+    .card-header {
+      justify-content: flex-end;
+    }
+  }
+</style>

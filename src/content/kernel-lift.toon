@@ -1,0 +1,11 @@
+meta:
+  title: "The Kernel Trick"
+  description: Concentric rings can't be separated by a straight line in 2D — but lift them into 3D via a feature map and a flat plane cuts them apart. Watch the boundary morph as the view tilts.
+  og_image: /og-image.png
+
+options: null
+
+content:
+  heading: "The Kernel Trick"
+  eyebrow: Classification
+  subtitle: "Data that isn't linearly separable in 2D becomes so in a lifted feature space"

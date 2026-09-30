@@ -16,6 +16,7 @@ import poisson from './modules/poisson';
 import gradientDescent from './modules/gradient-descent';
 import bayesianRegression from './modules/bayesian-regression';
 import perceptron from './modules/perceptron';
+import kernelLift from './modules/kernel-lift';
 
 export default (Alpine: Alpine) => {
   normalVariance(Alpine);
@@ -34,4 +35,5 @@ export default (Alpine: Alpine) => {
   gradientDescent(Alpine);
   bayesianRegression(Alpine);
   perceptron(Alpine);
+  kernelLift(Alpine);
 };
