@@ -58,6 +58,11 @@ const jsonLD = {
             Chebyshev
           </label>
           <label class="bound-toggle">
+            <input type="checkbox" x-model="showHoeffding" x-on:change="simulate()" />
+            <span class="bound-swatch bound-hoeffding"></span>
+            Hoeffding
+          </label>
+          <label class="bound-toggle">
             <input type="checkbox" x-model="showChernoff" x-on:change="simulate()" />
             <span class="bound-swatch bound-chernoff"></span>
             Chernoff
@@ -101,7 +106,8 @@ const jsonLD = {
         <ul>
           <li><strong>Markov</strong> only uses {"$\\mathbb{E}[X]$"}. Loosest bound, often doesn't shrink with n for the sample mean.</li>
           <li><strong>Chebyshev</strong> uses variance. Decays as {"$\\frac{\\sigma^2}{n\\varepsilon^2}$"}, tighter but still polynomial.</li>
-          <li><strong>Chernoff</strong> uses bounded range. Decays as {"$e^{-2n\\varepsilon^2 / R^2}$"}, exponentially fast. Only for bounded distributions.</li>
+          <li><strong>Hoeffding</strong> uses bounded range. Decays as {"$2e^{-2n\\varepsilon^2 / R^2}$"}, exponentially fast. Only for bounded distributions.</li>
+          <li><strong>Chernoff</strong> uses the full moment generating function. Decays as {"$e^{-n I(\\mu + \\varepsilon)}$"} where {"$I$"} is the Cramér rate function. Tightest of the four, and works for unbounded light-tailed distributions like the exponential.</li>
           <li><strong>$M_n \to \mu$</strong> with probability 1 as $n \to \infty$. All bounds confirm this, at different speeds.</li>
         </ul>
       </div>
@@ -122,6 +128,7 @@ const jsonLD = {
     display: flex;
     gap: 1.25rem;
     margin-bottom: 0.875rem;
+    flex-wrap: wrap;
   }
 
   .bound-toggle {
@@ -150,9 +157,10 @@ const jsonLD = {
     opacity: 0.25;
   }
 
-  .bound-markov { background: #f07858; }
+  .bound-markov { background: #e8a050; }
   .bound-chebyshev { background: #90b878; }
-  .bound-chernoff { background: #e8a050; }
+  .bound-hoeffding { background: #c890b0; }
+  .bound-chernoff { background: #f07858; }
 
   .confidence-row {
     display: flex;
