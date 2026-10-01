@@ -61,16 +61,95 @@ export default function (Alpine: Alpine) {
       return (lo + hi) / 2;
     }
 
+    const band = (label: string, order: number, rgb: string) => [
+      { label: `${label} upper`, order, data: [] as number[], borderColor: `rgba(${rgb},0.9)`, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: false },
+      { label: `${label} lower`, order, data: [] as number[], borderColor: `rgba(${rgb},0.9)`, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: '-1' as any, backgroundColor: `rgba(${rgb},0.08)` },
+    ];
+
+    const anim = { duration: 250, easing: 'easeOutQuart' as const };
+
+    function setData(chart: Chart, arrays: number[][]) {
+      arrays.forEach((arr, i) => {
+        const ds = chart.data.datasets[i];
+        if (ds) ds.data = arr;
+      });
+    }
+
+    function buildCharts() {
+      const canvas1 = document.getElementById('lln-convergence') as HTMLCanvasElement | null;
+      const canvas2 = document.getElementById('lln-decay') as HTMLCanvasElement | null;
+      if (!canvas1 || !canvas2) return;
+
+      convergenceChart = new Chart(canvas1, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Sample mean Mₙ', data: [], borderColor: COLORS.colonial, borderWidth: 1.5, pointRadius: 0, fill: false, order: 0 },
+            { label: 'True mean μ', data: [], borderColor: COLORS.teak, borderWidth: 1, borderDash: [6, 4], pointRadius: 0, fill: false, order: 1 },
+            ...band('Markov', 5, '232,160,80'),
+            ...band('Chebyshev', 3, '144,184,120'),
+            ...band('Hoeffding', 4, '200,144,176'),
+            ...band('Chernoff', 2, '240,120,88'),
+          ],
+        },
+        options: {
+          animation: anim,
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: window.innerWidth < 480 ? 0.75 : 2.4,
+          plugins: {
+            legend: legend({ labels: {
+              filter: (item: any) => !item.text.includes('lower') && !item.hidden,
+              sort: (a: any, b: any) => a.datasetIndex - b.datasetIndex,
+            } }),
+            tooltip: { enabled: false },
+          },
+          scales: {
+            x: axis({ type: 'linear', min: 1, max: 200, title: { display: true, text: 'n (samples)', color: COLORS.pottersClay } }),
+            y: axis({ title: { display: true, text: 'Mₙ', color: COLORS.pottersClay } }),
+          },
+        },
+      });
+
+      decayChart = new Chart(canvas2, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Markov', data: [], borderColor: COLORS.porsche, borderWidth: 2, pointRadius: 0, fill: false },
+            { label: 'Chebyshev', data: [], borderColor: COLORS.olivine, borderWidth: 2, pointRadius: 0, fill: false },
+            { label: 'Hoeffding', data: [], borderColor: MAUVE, borderWidth: 2, pointRadius: 0, fill: false },
+            { label: 'Chernoff', data: [], borderColor: COLORS.sienna, borderWidth: 2, pointRadius: 0, fill: false },
+          ],
+        },
+        options: {
+          animation: anim,
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2.8,
+          plugins: {
+            legend: legend({ labels: { filter: (item: any) => !item.hidden } }),
+            tooltip: { enabled: false },
+          },
+          scales: {
+            x: axis({ type: 'linear', min: 1, max: 200, title: { display: true, text: 'n', color: COLORS.pottersClay } }),
+            y: axis({ min: 0, max: 1, title: { display: true, text: 'ℙ(|Mₙ-μ| ≥ ε)', color: COLORS.pottersClay } }),
+          },
+        },
+      });
+    }
+
     function run(dist: string, N: number, epsilon: number, confidence: number, showMarkov: boolean, showCheb: boolean, showHoeffding: boolean, showChernoff: boolean) {
       const d = dists[dist];
       if (!d) return;
+      if (!convergenceChart || !decayChart) buildCharts();
+      if (!convergenceChart || !decayChart) return;
 
-      const samples: number[] = [];
       const means: number[] = [];
       let sum = 0;
       for (let i = 0; i < N; i++) {
         sum += d.sample();
-        samples.push(sum / (i + 1));
         means.push(sum / (i + 1));
       }
 
@@ -104,143 +183,36 @@ export default function (Alpine: Alpine) {
 
       const xLabels = Array.from({ length: N }, (_, i) => i + 1);
 
-      const datasets: any[] = [
-        {
-          label: 'Sample mean Mₙ',
-          data: means,
-          borderColor: COLORS.colonial,
-          borderWidth: 1.5,
-          pointRadius: 0,
-          fill: false,
-          order: 0,
-        },
-        {
-          label: 'True mean μ',
-          data: new Array(N).fill(mu),
-          borderColor: COLORS.teak,
-          borderWidth: 1,
-          borderDash: [6, 4],
-          pointRadius: 0,
-          fill: false,
-          order: 1,
-        },
-      ];
+      const c1 = convergenceChart;
+      c1.data.labels = xLabels;
+      setData(c1, [
+        means,
+        new Array(N).fill(mu),
+        markovBand.map(up), markovBand.map(down),
+        chebBand.map(up), chebBand.map(down),
+        hoeffdingBand.map(up), hoeffdingBand.map(down),
+        chernoffUpper.map(up), chernoffLower.map(down),
+      ]);
+      const vis1 = [true, true, showMarkov, showMarkov, showCheb, showCheb, showHoeffding && bounded, showHoeffding && bounded, showChernoff, showChernoff];
+      vis1.forEach((v, i) => c1.setDatasetVisibility(i, v));
+      (c1.options.scales as any).x.max = N;
+      c1.update();
 
-      if (showMarkov) {
-        datasets.push(
-          { label: 'Markov upper', order: 5, data: markovBand.map(up), borderColor: 'rgba(232,160,80,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: false },
-          { label: 'Markov lower', order: 5, data: markovBand.map(down), borderColor: 'rgba(232,160,80,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: '-1' as any, backgroundColor: 'rgba(232,160,80,0.08)' },
-        );
-      }
-      if (showCheb) {
-        datasets.push(
-          { label: 'Chebyshev upper', order: 3, data: chebBand.map(up), borderColor: 'rgba(144,184,120,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: false },
-          { label: 'Chebyshev lower', order: 3, data: chebBand.map(down), borderColor: 'rgba(144,184,120,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: '-1' as any, backgroundColor: 'rgba(144,184,120,0.08)' },
-        );
-      }
-      if (showHoeffding && bounded) {
-        datasets.push(
-          { label: 'Hoeffding upper', order: 4, data: hoeffdingBand.map(up), borderColor: 'rgba(200,144,176,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: false },
-          { label: 'Hoeffding lower', order: 4, data: hoeffdingBand.map(down), borderColor: 'rgba(200,144,176,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: '-1' as any, backgroundColor: 'rgba(200,144,176,0.08)' },
-        );
-      }
-      if (showChernoff) {
-        datasets.push(
-          { label: 'Chernoff upper', order: 2, data: chernoffUpper.map(up), borderColor: 'rgba(240,120,88,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: false },
-          { label: 'Chernoff lower', order: 2, data: chernoffLower.map(down), borderColor: 'rgba(240,120,88,0.9)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: '-1' as any, backgroundColor: 'rgba(240,120,88,0.08)' },
-        );
-      }
-
-      const canvas1 = document.getElementById('lln-convergence') as HTMLCanvasElement | null;
-      if (canvas1) {
-        if (convergenceChart) convergenceChart.destroy();
-        convergenceChart = new Chart(canvas1, {
-          type: 'line',
-          data: { labels: xLabels, datasets },
-          options: {
-            animation: { duration: 300, easing: 'easeOutQuart' as const },
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: window.innerWidth < 480 ? 0.75 : 2.4,
-            plugins: {
-              legend: legend({ labels: { filter: (item: any) => !item.text.includes('lower'), sort: (a: any, b: any) => a.datasetIndex - b.datasetIndex } }),
-              tooltip: { enabled: false },
-            },
-            scales: {
-              x: axis({
-                type: 'linear', min: 1, max: N,
-                title: { display: true, text: 'n (samples)', color: COLORS.pottersClay },
-              }),
-              y: axis({
-                title: { display: true, text: 'Mₙ', color: COLORS.pottersClay },
-              }),
-            },
-          },
-        });
-      }
-
-      const canvas2 = document.getElementById('lln-decay') as HTMLCanvasElement | null;
-      if (canvas2) {
-        if (decayChart) decayChart.destroy();
-        const eps = epsilon;
-        const decayDatasets: any[] = [];
-
-        if (showMarkov) {
-          decayDatasets.push({
-            label: 'Markov',
-            data: xLabels.map((n) => Math.min(sigma / (eps * Math.sqrt(n)), 1)),
-            borderColor: COLORS.porsche, borderWidth: 2, pointRadius: 0, fill: false,
-          });
-        }
-        if (showCheb) {
-          decayDatasets.push({
-            label: 'Chebyshev',
-            data: xLabels.map((n) => Math.min(sigma * sigma / (n * eps * eps), 1)),
-            borderColor: COLORS.olivine, borderWidth: 2, pointRadius: 0, fill: false,
-          });
-        }
-        if (showHoeffding && bounded) {
-          decayDatasets.push({
-            label: 'Hoeffding',
-            data: xLabels.map((n) => Math.min(2 * Math.exp(-2 * n * eps * eps / (R * R)), 1)),
-            borderColor: MAUVE, borderWidth: 2, pointRadius: 0, fill: false,
-          });
-        }
-        if (showChernoff) {
-          const iUp = d.rate(mu + eps);
-          const iDown = d.rate(mu - eps);
-          decayDatasets.push({
-            label: 'Chernoff',
-            data: xLabels.map((n) => Math.min(Math.exp(-n * iUp) + Math.exp(-n * iDown), 1)),
-            borderColor: COLORS.sienna, borderWidth: 2, pointRadius: 0, fill: false,
-          });
-        }
-
-        decayChart = new Chart(canvas2, {
-          type: 'line',
-          data: { labels: xLabels, datasets: decayDatasets },
-          options: {
-            animation: { duration: 300, easing: 'easeOutQuart' as const },
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2.8,
-            plugins: {
-              legend: legend(),
-              tooltip: { enabled: false },
-            },
-            scales: {
-              x: axis({
-                type: 'linear', min: 1, max: N,
-                title: { display: true, text: 'n', color: COLORS.pottersClay },
-              }),
-              y: axis({
-                min: 0, max: 1,
-                title: { display: true, text: 'ℙ(|Mₙ-μ| ≥ ε)', color: COLORS.pottersClay },
-              }),
-            },
-          },
-        });
-      }
+      const eps = epsilon;
+      const iUp = d.rate(mu + eps);
+      const iDown = d.rate(mu - eps);
+      const c2 = decayChart;
+      c2.data.labels = xLabels;
+      setData(c2, [
+        xLabels.map((n) => Math.min(sigma / (eps * Math.sqrt(n)), 1)),
+        xLabels.map((n) => Math.min(sigma * sigma / (n * eps * eps), 1)),
+        xLabels.map((n) => (bounded ? Math.min(2 * Math.exp(-2 * n * eps * eps / (R * R)), 1) : NaN)),
+        xLabels.map((n) => Math.min(Math.exp(-n * iUp) + Math.exp(-n * iDown), 1)),
+      ]);
+      const vis2 = [showMarkov, showCheb, showHoeffding && bounded, showChernoff];
+      vis2.forEach((v, i) => c2.setDatasetVisibility(i, v));
+      (c2.options.scales as any).x.max = N;
+      c2.update();
     }
 
     return {
