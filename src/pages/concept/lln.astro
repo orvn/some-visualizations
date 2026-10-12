@@ -67,6 +67,11 @@ const jsonLD = {
             <span class="bound-swatch bound-chernoff"></span>
             Chernoff
           </label>
+          <label class="bound-toggle">
+            <input type="checkbox" x-model="showBerry" x-on:change="simulate()" />
+            <span class="bound-swatch bound-berry"></span>
+            Berry-Esseen
+          </label>
         </div>
 
         <div class="confidence-row">
@@ -107,7 +112,8 @@ const jsonLD = {
           <li><strong>Markov</strong> only uses {"$\\mathbb{E}[X]$"}. Loosest bound, often doesn't shrink with n for the sample mean.</li>
           <li><strong>Chebyshev</strong> uses variance. Decays as {"$\\frac{\\sigma^2}{n\\varepsilon^2}$"}, tighter but still polynomial.</li>
           <li><strong>Hoeffding</strong> uses bounded range. Decays as {"$2e^{-2n\\varepsilon^2 / R^2}$"}, exponentially fast. Only for bounded distributions.</li>
-          <li><strong>Chernoff</strong> uses the full moment generating function. Decays as {"$e^{-n I(\\mu + \\varepsilon)}$"} where {"$I$"} is the Cramér rate function. Tightest of the four, and works for unbounded light-tailed distributions like the exponential.</li>
+          <li><strong>Chernoff</strong> uses the full moment generating function. Decays as {"$e^{-n I(\\mu + \\varepsilon)}$"} where {"$I$"} is the Cramér rate function. Tightest of the concentration bounds, and works for unbounded light-tailed distributions like the exponential.</li>
+          <li><strong>Berry-Esseen</strong> is a different kind of statement. It bounds how far the distribution of {"$M_n$"} is from the normal approximation: {"$2(1-\\Phi(\\varepsilon\\sqrt{n}/\\sigma)) + \\frac{2C\\rho}{\\sigma^3\\sqrt{n}}$"} with {"$\\rho = \\mathbb{E}|X-\\mu|^3$"} and {"$C \\approx 0.4748$"}. The error term shrinks only as {"$1/\\sqrt{n}$"}, so the band stays vacuous at high confidence until n is in the hundreds. It can beat Chebyshev for small ε but never catches the exponential bounds.</li>
           <li><strong>$M_n \to \mu$</strong> with probability 1 as $n \to \infty$. All bounds confirm this, at different speeds.</li>
         </ul>
       </div>
@@ -161,6 +167,7 @@ const jsonLD = {
   .bound-chebyshev { background: #90b878; }
   .bound-hoeffding { background: #c890b0; }
   .bound-chernoff { background: #f07858; }
+  .bound-berry { background: #88b0d0; }
 
   .confidence-row {
     display: flex;

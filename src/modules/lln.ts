@@ -4,6 +4,42 @@ import { Chart } from 'chart.js';
 import { COLORS, axis, legend } from './shared/chart';
 
 const MAUVE = '#c890b0';
+const SLATE = '#88b0d0';
+
+// Berry-Esseen constant for iid sums (Shevtsova 2011)
+const BE_C = 0.4748;
+
+// Abramowitz-Stegun 7.1.26, abs error < 1.5e-7
+function erf(x: number): number {
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * x);
+  const poly = ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t;
+  return sign * (1 - poly * Math.exp(-x * x));
+}
+
+function normalCdf(z: number): number {
+  return 0.5 * (1 + erf(z / Math.SQRT2));
+}
+
+// two-sided tail bound P(|Mn - mu| >= eps) <= 2(1 - Φ(eps√n/σ)) + 2Cρ/(σ³√n)
+function berryEsseenTail(n: number, eps: number, sigma: number, rho: number): number {
+  const z = eps * Math.sqrt(n) / sigma;
+  return 2 * (1 - normalCdf(z)) + 2 * BE_C * rho / (sigma ** 3 * Math.sqrt(n));
+}
+
+// smallest eps with berryEsseenTail <= alpha, Infinity when the error term alone exceeds alpha
+function berryEsseenEps(n: number, alpha: number, sigma: number, rho: number): number {
+  const err = 2 * BE_C * rho / (sigma ** 3 * Math.sqrt(n));
+  if (err >= alpha) return Infinity;
+  const target = 1 - (alpha - err) / 2;
+  let lo = 0, hi = 10;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (normalCdf(mid) < target) lo = mid; else hi = mid;
+  }
+  return sigma * (lo + hi) / 2 / Math.sqrt(n);
+}
 
 // uniform[0,1] cumulant K(t) = ln((e^t - 1)/t), K'(t) is increasing from 0 to 1
 function uniformCumulant(t: number): number {
@@ -44,10 +80,10 @@ export default function (Alpine: Alpine) {
     let convergenceChart: Chart | null = null;
     let decayChart: Chart | null = null;
 
-    const dists: Record<string, { sample: () => number; mu: number; sigma: number; range: [number, number]; rate: (x: number) => number }> = {
-      uniform: { sample: () => Math.random(), mu: 0.5, sigma: Math.sqrt(1/12), range: [0, 1], rate: uniformRate },
-      exponential: { sample: () => -Math.log(1 - Math.random()), mu: 1, sigma: 1, range: [0, Infinity], rate: exponentialRate },
-      bernoulli: { sample: () => Math.random() < 0.5 ? 1 : 0, mu: 0.5, sigma: 0.5, range: [0, 1], rate: (x) => bernoulliRate(x, 0.5) },
+    const dists: Record<string, { sample: () => number; mu: number; sigma: number; rho: number; range: [number, number]; rate: (x: number) => number }> = {
+      uniform: { sample: () => Math.random(), mu: 0.5, sigma: Math.sqrt(1/12), rho: 1/32, range: [0, 1], rate: uniformRate },
+      exponential: { sample: () => -Math.log(1 - Math.random()), mu: 1, sigma: 1, rho: 12 / Math.E - 2, range: [0, Infinity], rate: exponentialRate },
+      bernoulli: { sample: () => Math.random() < 0.5 ? 1 : 0, mu: 0.5, sigma: 0.5, rho: 0.125, range: [0, 1], rate: (x) => bernoulliRate(x, 0.5) },
     };
 
     // smallest ε with I(mu + sign*ε) >= target, I is increasing away from mu
@@ -91,6 +127,7 @@ export default function (Alpine: Alpine) {
             ...band('Chebyshev', 3, '144,184,120'),
             ...band('Hoeffding', 4, '200,144,176'),
             ...band('Chernoff', 2, '240,120,88'),
+            ...band('Berry-Esseen', 6, '136,176,208'),
           ],
         },
         options: {
@@ -121,6 +158,7 @@ export default function (Alpine: Alpine) {
             { label: 'Chebyshev', data: [], borderColor: COLORS.olivine, borderWidth: 2, pointRadius: 0, fill: false },
             { label: 'Hoeffding', data: [], borderColor: MAUVE, borderWidth: 2, pointRadius: 0, fill: false },
             { label: 'Chernoff', data: [], borderColor: COLORS.sienna, borderWidth: 2, pointRadius: 0, fill: false },
+            { label: 'Berry-Esseen', data: [], borderColor: SLATE, borderWidth: 2, pointRadius: 0, fill: false },
           ],
         },
         options: {
@@ -140,7 +178,7 @@ export default function (Alpine: Alpine) {
       });
     }
 
-    function run(dist: string, N: number, epsilon: number, confidence: number, showMarkov: boolean, showCheb: boolean, showHoeffding: boolean, showChernoff: boolean) {
+    function run(dist: string, N: number, epsilon: number, confidence: number, showMarkov: boolean, showCheb: boolean, showHoeffding: boolean, showChernoff: boolean, showBerry: boolean) {
       const d = dists[dist];
       if (!d) return;
       if (!convergenceChart || !decayChart) buildCharts();
@@ -155,6 +193,7 @@ export default function (Alpine: Alpine) {
 
       const mu = d.mu;
       const sigma = d.sigma;
+      const rho = d.rho;
       const alpha = 1 - confidence;
       const bounded = isFinite(d.range[1]);
       const a = d.range[0];
@@ -171,6 +210,7 @@ export default function (Alpine: Alpine) {
       const hoeffdingBand: number[] = [];
       const chernoffUpper: number[] = [];
       const chernoffLower: number[] = [];
+      const berryBand: number[] = [];
 
       for (let n = 1; n <= N; n++) {
         markovBand.push(sigma / (alpha * Math.sqrt(n)));
@@ -179,6 +219,7 @@ export default function (Alpine: Alpine) {
         const target = Math.log(2 / alpha) / n;
         chernoffUpper.push(invertRate(d.rate, mu, 1, upLimit, target));
         chernoffLower.push(invertRate(d.rate, mu, -1, downLimit, target));
+        berryBand.push(berryEsseenEps(n, alpha, sigma, rho));
       }
 
       const xLabels = Array.from({ length: N }, (_, i) => i + 1);
@@ -192,8 +233,9 @@ export default function (Alpine: Alpine) {
         chebBand.map(up), chebBand.map(down),
         hoeffdingBand.map(up), hoeffdingBand.map(down),
         chernoffUpper.map(up), chernoffLower.map(down),
+        berryBand.map(up), berryBand.map(down),
       ]);
-      const vis1 = [true, true, showMarkov, showMarkov, showCheb, showCheb, showHoeffding && bounded, showHoeffding && bounded, showChernoff, showChernoff];
+      const vis1 = [true, true, showMarkov, showMarkov, showCheb, showCheb, showHoeffding && bounded, showHoeffding && bounded, showChernoff, showChernoff, showBerry, showBerry];
       vis1.forEach((v, i) => c1.setDatasetVisibility(i, v));
       (c1.options.scales as any).x.max = N;
       c1.update();
@@ -208,8 +250,9 @@ export default function (Alpine: Alpine) {
         xLabels.map((n) => Math.min(sigma * sigma / (n * eps * eps), 1)),
         xLabels.map((n) => (bounded ? Math.min(2 * Math.exp(-2 * n * eps * eps / (R * R)), 1) : NaN)),
         xLabels.map((n) => Math.min(Math.exp(-n * iUp) + Math.exp(-n * iDown), 1)),
+        xLabels.map((n) => Math.min(berryEsseenTail(n, eps, sigma, rho), 1)),
       ]);
-      const vis2 = [showMarkov, showCheb, showHoeffding && bounded, showChernoff];
+      const vis2 = [showMarkov, showCheb, showHoeffding && bounded, showChernoff, showBerry];
       vis2.forEach((v, i) => c2.setDatasetVisibility(i, v));
       (c2.options.scales as any).x.max = N;
       c2.update();
@@ -224,6 +267,7 @@ export default function (Alpine: Alpine) {
       showCheb: true,
       showHoeffding: true,
       showChernoff: true,
+      showBerry: true,
 
       init() {
         this.simulate();
@@ -239,6 +283,7 @@ export default function (Alpine: Alpine) {
           this.showCheb,
           this.showHoeffding,
           this.showChernoff,
+          this.showBerry,
         );
       },
     };
